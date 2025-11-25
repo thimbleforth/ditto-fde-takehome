@@ -1,0 +1,19 @@
+# all of these packages are available via pip
+# the versions are the latest on PyPI as of 24 NOV 2025
+
+# Web framework
+Flask==3.1.2
+
+# Database ORM
+SQLAlchemy==2.0.44
+
+# For Postgres support (optional, if you swap SQLite for Postgres)
+psycopg==3.2.13
+
+# HTTP client for edge-to-cloud sync
+requests==2.32.5
+
+# pyjwt and cryptography to handle RS256 in PyJWT
+pyjwt[crypto]==2.10.1
+
+# also uses datetime built-in module
