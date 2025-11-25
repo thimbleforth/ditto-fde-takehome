@@ -10,8 +10,8 @@ This is my repo for Ditto's FDE take-home exam.
 * Support audit logging (who, what, when for compliance)
 
 ### Technical Requirements:
-* Use any language/framework you're comfortable with: Python, SQLite for local storage, and PostgreSQL in AWS for the cloud side. Database is accessible through an AWS ELB, and only after jwt-based authentication.
-* Implement or simulate a sync mechanism between edge and cloud: AWS Cloud SDK-based syncs between edges and the cloud.
+* Use any language/framework you're comfortable with: Python, SQLite for local storage, Flask to simulate a small / serverless cloud server. Database is accessible through a small API, and only after jwt-based authentication.
+* Implement or simulate a sync mechanism between edge and cloud: multiple containers in a network sync data to a central cloud.
 * Include conflict resolution logic appropriate for collaborative work
 
 ### TODO:
@@ -38,7 +38,7 @@ Optional: You can also hit the `/api/health` and `/api/reports` endpoints direct
 ## Sync Strategy
 The sync strategy is "last write wins," plain and simple. The format of the reports is simple enough that the DB can take in changes on a given ID without a lot of fuss.
 
-Currently, the database records all of the changes, assigning a unique ID. So the latest ID 
+Currently, the database records all of the changes, assigning a unique ID. So the latest ID (ergo, latest recorded change) of a given record_id, is what's shown when you click `Get Latest Reports`.
 
 ## Tradeoffs / CAP Theorem
 The system as currently designed is meant to run solely in containers, and is set up as a "client-server" system for ease of implementation.
