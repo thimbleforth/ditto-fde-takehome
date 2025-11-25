@@ -1,0 +1,48 @@
+services:
+  cloud:
+    build: ./cloud
+    container_name: cloud_app
+    ports:
+      - "8443:8443"
+    volumes:
+      - ./keys:/app/keys:ro   # mount public.pem
+      - ./cloud/cloud_app.py:/app/cloud_app.py:ro   # mount cloud_app.py
+      - ./cloud/cloud_data:/app/data
+    environment:
+      - PUBLIC_KEY_PATH=/app/keys/public.pem
+      - CLOUD_DB_PATH=/app/data/cloud_db.sqlite
+
+  edge1:
+    build: ./edge
+    container_name: edge_app1
+    depends_on:
+      - cloud
+    volumes:
+      - ./edge/edge_app.py:/app/edge_app.py:ro   # mount edge_app.py
+      - ./keys:/app/keys:ro   # mount private.pem
+      - ./edge1_data:/app/data
+    environment:
+      - PRIVATE_KEY_PATH=/app/keys/private.pem
+      - EDGE_USER=edge1
+      - CLOUD_URL=http://cloud:8443
+      - EDGE_DB_PATH=/app/data/edge_db.sqlite
+
+# these are two edge instances simulating different edge devices
+# they're using the same codebase but different environment variables
+# they're using the same PEMs for simplicity
+# normally you'd be grabbing those from KMS
+
+  edge2:
+    build: ./edge
+    container_name: edge_app2
+    depends_on:
+      - cloud
+    volumes:
+      - ./edge/edge_app.py:/app/edge_app.py:ro   # mount edge_app.py
+      - ./keys:/app/keys:ro   # mount private.pem
+      - ./edge2_data:/app/data
+    environment:
+      - PRIVATE_KEY_PATH=/app/keys/private.pem
+      - EDGE_USER=edge2
+      - CLOUD_URL=http://cloud:8443
+      - EDGE_DB_PATH=/app/data/edge_db.sqlite
