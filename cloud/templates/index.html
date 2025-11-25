@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ditto Cloud App Demo</title>
+  <style>
+    body { font-family: sans-serif; margin: 2em; }
+    button { margin: 0.5em; padding: 0.5em 1em; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1em; }
+    th, td { border: 1px solid #ccc; padding: 0.5em; text-align: left; }
+    tr:hover { background: #f9f9f9; cursor: pointer; }
+    #details { margin-top: 1em; padding: 1em; background: #f0f0f0; }
+  </style>
+</head>
+<body>
+  <h1>Ditto Cloud App Demo</h1>
+
+  <button onclick="checkHealth()">Check Health</button>
+  <button onclick="getReports()">Get Reports</button>
+  <button onclick="syncReport()">Sync Dummy Report</button>
+  <button onclick="getLatestReports()">Get Latest Reports</button>
+
+
+  <h2>Output</h2>
+  <div id="output"></div>
+  <div id="details"></div>
+
+  <script>
+    const output = document.getElementById("output");
+    const details = document.getElementById("details");
+
+    function checkHealth() {
+      fetch("/api/health")
+        .then(r => r.json())
+        .then(data => {
+          output.innerHTML = "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+          details.innerHTML = "";
+        })
+        .catch(err => output.textContent = err);
+    }
+
+    function getReports() {
+      fetch("/api/reports")
+        .then(r => r.json())
+        .then(data => {
+          // Build table
+          let html = "<table><thead><tr><th>ID</th><th>Report ID</th><th>Title</th><th>Classification</th><th>Updated At</th><th>Updated By</th></tr></thead><tbody>";
+          data.forEach((report, idx) => {
+            html += `<tr onclick="showDetails(${idx})">
+              <td>${report.id}</td>
+              <td>${report.report_id}</td>
+              <td>${report.title}</td>
+              <td>${report.classification}</td>
+              <td>${report.updated_at}</td>
+              <td>${report.updated_by}</td>
+            </tr>`;
+          });
+          html += "</tbody></table>";
+          output.innerHTML = html;
+
+          // Save data for detail view
+          window.reportData = data;
+          details.innerHTML = "";
+        })
+        .catch(err => output.textContent = err);
+    }
+
+    function showDetails(idx) {
+      const report = window.reportData[idx];
+      details.innerHTML = "<h3>Report Details</h3><pre>" + JSON.stringify(report, null, 2) + "</pre>";
+    }
+
+    function syncReport() {
+      const report = {
+        report_id: "demo" + Math.floor(Math.random() * 1000),
+        title: "Test Report " + Math.floor(Math.random() * 1000),
+        content: "This is a demo report.",
+        classification: "CUI",
+        updated_at: new Date().toISOString()
+      };
+
+      fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(report)
+      })
+      .then(r => r.json())
+      .then(data => {
+        output.innerHTML = "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+        details.innerHTML = "";
+      })
+      .catch(err => output.textContent = err);
+    }
+
+    function getLatestReports() {
+      fetch("/api/reports/latest")
+        .then(r => r.json())
+        .then(data => {
+          let html = "<table><thead><tr><th>ID</th><th>Report ID</th><th>Title</th><th>Classification</th><th>Updated At</th><th>Updated By</th></tr></thead><tbody>";
+          data.forEach((report, idx) => {
+            html += `<tr onclick="showDetails(${idx})">
+              <td>${report.id}</td>
+              <td>${report.report_id}</td>
+              <td>${report.title}</td>
+              <td>${report.classification}</td>
+              <td>${report.updated_at}</td>
+              <td>${report.updated_by}</td>
+            </tr>`;
+          });
+          html += "</tbody></table>";
+          output.innerHTML = html;
+          window.reportData = data;
+          details.innerHTML = "";
+        })
+        .catch(err => output.textContent = err);
+  }
+  </script>
+</body>
+</html>
