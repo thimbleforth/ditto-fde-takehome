@@ -1,5 +1,5 @@
-edge/edge1_data/*
-edge/edge2_data/*
+/edge1_data
+/edge2_data
 cloud/cloud_data/*
 keys/*
 
