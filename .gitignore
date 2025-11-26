@@ -1,6 +1,6 @@
 /edge1_data
 /edge2_data
-cloud/cloud_data/*
+/cloud_data
 keys/*
 
 # Byte-compiled / optimized / DLL files
