@@ -4,17 +4,26 @@ This is my repo for Ditto's FDE take-home exam.
 ## Features
 ### Functional Requirements:
 ✅ Multiple edge locations can create and update reports
+
 ✅ Changes sync automatically to a central government cloud database (PostgreSQL in AWS RDS)
+
 ✅ Handles conflicting updates (e.g., two analysts update the same report offline)
+
 ✅ Display sync status and conflict resolution
+
 ✅ Support audit logging (who, what, when for compliance)
 
 ### Technical Requirements:
 ✅ Use any language/framework you're comfortable with: Python, SQLite for local storage, Flask to simulate a small / serverless cloud server. Database is accessible through a small API, and only after jwt-based authentication.
+
 ✅ Implement or simulate a sync mechanism between edge and cloud: multiple containers in a network sync data to a central cloud.
+
 ✅ Include conflict resolution logic appropriate for collaborative work
+
 ✅ Add comments explaining your design decisions
+
 ✅ Consider idempotency and retry logic
+
 ✅ Demonstrate security considerations (authentication, encryption in transit
 
 ## How to Run
