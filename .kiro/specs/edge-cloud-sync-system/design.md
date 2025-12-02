@@ -56,6 +56,13 @@ The architecture follows an eventually consistent model where edge devices maint
 │ │(Python)    │ │                  │ │ (Python)    │ │
 │ │            │ │                  │ │             │ │
 │ │┌──────────┐│ │                  │ │┌──────────┐ │ │
+│ ││CLI Menu  ││ │                  │ ││CLI Menu  ││ │
+│ │└──────────┘│ │                  │ │└──────────┘ │ │
+│ │┌──────────┐│ │                  │ │┌──────────┐ │ │
+│ ││Web UI    ││ │                  │ ││Web UI    ││ │
+│ ││(Flask)   ││ │                  │ ││(Flask)   ││ │
+│ │└──────────┘│ │                  │ │└──────────┘ │ │
+│ │┌──────────┐│ │                  │ │┌──────────┐ │ │
 │ ││JWT Signer││ │                  │ ││JWT Signer││ │
 │ │└──────────┘│ │                  │ │└──────────┘ │ │
 │ │┌──────────┐│ │                  │ │┌──────────┐ │ │
@@ -68,13 +75,19 @@ The architecture follows an eventually consistent model where edge devices maint
 │ │  SQLite    │ │                  │ │  SQLite    │ │
 │ │ (Edge DB)  │ │                  │ │ (Edge DB)  │ │
 │ └────────────┘ │                  │ └────────────┘ │
+│                │                  │                │
+│  User Access:  │                  │  User Access:  │
+│  - CLI Menu    │                  │  - CLI Menu    │
+│  - Web (5000)  │                  │  - Web (5000)  │
 └────────────────┘                  └────────────────┘
 ```
 
 ### Component Responsibilities
 
 **Edge Application**:
-- Local report CRUD operations
+- Local report CRUD operations via CLI and web interface
+- Interactive CLI menu for report management
+- Local Flask web server for browser-based report management
 - JWT token generation and signing
 - Periodic synchronization with cloud
 - Local SQLite database management
@@ -92,10 +105,12 @@ The architecture follows an eventually consistent model where edge devices maint
 
 **Edge Device**:
 - Python 3.x
+- Flask (local web server)
 - SQLite3 (local database)
 - PyJWT (token generation)
 - Requests (HTTP client)
 - Cryptography libraries (RSA key handling)
+- Jinja2 (template rendering for local web UI)
 
 **Cloud Server**:
 - Python 3.x
@@ -211,6 +226,91 @@ display_sync_summary(results) -> None
     ]
 }
 ```
+
+#### 4. CLI Interface
+
+**Purpose**: Provides interactive command-line menu for report management on edge devices.
+
+**Responsibilities**:
+- Display interactive menu with CRUD options
+- Prompt user for input with validation
+- Execute database operations based on user selections
+- Display operation results and error messages
+- Loop continuously until user exits
+
+**Key Functions**:
+```python
+display_menu() -> None
+get_user_choice() -> int
+handle_create_report() -> None
+handle_view_reports() -> None
+handle_update_report() -> None
+handle_delete_report() -> None
+handle_sync() -> None
+validate_classification(value) -> bool
+validate_report_id(value) -> bool
+```
+
+**Menu Structure**:
+```
+=== Edge Device Report Management ===
+1. Create Report
+2. View All Reports
+3. Update Report
+4. Delete Report
+5. Sync to Cloud
+6. Exit
+Enter your choice (1-6):
+```
+
+**User Interaction Flow**:
+1. Display menu options
+2. Get user choice (1-6)
+3. Execute corresponding function
+4. Display success/error message
+5. Return to menu (unless Exit selected)
+
+#### 5. Web Interface (Edge)
+
+**Purpose**: Provides browser-based report management interface on edge devices.
+
+**Responsibilities**:
+- Run Flask web server on local port
+- Serve HTML interface for report management
+- Provide REST API endpoints for CRUD operations
+- Handle form submissions and validations
+- Display sync status and operation results
+- Mirror cloud interface design and functionality
+
+**Key Functions**:
+```python
+run_web_server(port=5000) -> None
+render_index() -> str
+api_get_reports() -> tuple[dict, int]
+api_create_report() -> tuple[dict, int]
+api_update_report(report_id) -> tuple[dict, int]
+api_delete_report(report_id) -> tuple[dict, int]
+api_sync() -> tuple[dict, int]
+validate_report_data(data) -> tuple[bool, str]
+```
+
+**API Endpoints**:
+- `GET /` - Render main report management page
+- `GET /api/reports` - Retrieve all local reports
+- `GET /api/reports/latest` - Retrieve latest version of each report
+- `POST /api/reports` - Create new report
+- `PUT /api/reports/<id>` - Update existing report
+- `DELETE /api/reports/<id>` - Soft delete report
+- `POST /api/sync` - Trigger synchronization to cloud
+
+**Web Interface Features**:
+- Report table with columns: ID, Report ID, Title, Content, Classification, Updated At, Updated By, Sync Status, Actions
+- Create Report button and modal form
+- Edit/Delete action buttons for each report
+- Sync to Cloud button with progress indicator
+- Visual indicators for sync status (synced, pending, failed)
+- Error/success message display area
+- Responsive design matching cloud interface
 
 ### Cloud Application Components
 

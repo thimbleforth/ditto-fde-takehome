@@ -250,24 +250,152 @@
   - Test input validation for all fields
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
 
-- [ ] 14. Create documentation and examples
-- [ ] 14.1 Update README with new features
+- [ ] 14. Implement CLI interface for edge device
+- [ ] 14.1 Create CLI menu module
+  - Create new file `edge/cli_interface.py` with interactive menu system
+  - Implement `display_menu()` function to show menu options
+  - Implement `get_user_choice()` function with input validation
+  - Implement main loop that continues until user selects Exit
+  - _Requirements: 11.1, 11.2, 11.8_
+
+- [ ] 14.2 Implement CLI CRUD operations
+  - Implement `handle_create_report()` function to prompt for and create reports
+  - Implement `handle_view_reports()` function to display all local reports in formatted table
+  - Implement `handle_update_report()` function to prompt for report_id and update fields
+  - Implement `handle_delete_report()` function to prompt for report_id and confirm deletion
+  - Implement `handle_sync()` function to trigger sync and display results
+  - _Requirements: 11.3, 11.4, 11.5, 11.6, 11.7_
+
+- [ ] 14.3 Add CLI input validation
+  - Implement `validate_report_id()` function to check format (alphanumeric and hyphens)
+  - Implement `validate_classification()` function to ensure value is CUI, IL4, or IL5
+  - Implement `validate_length()` function for title and content limits
+  - Display clear error messages for invalid inputs
+  - _Requirements: 11.9_
+
+- [ ] 14.4 Add CLI success/error messaging
+  - Display success confirmations after each operation with details
+  - Display error messages with specific failure reasons
+  - Format output for readability with proper spacing and alignment
+  - _Requirements: 11.9, 11.10_
+
+- [ ] 14.5 Integrate CLI with edge application
+  - Update `edge/edge_app.py` to support CLI mode via command-line argument
+  - Add `--cli` flag to launch interactive menu instead of automatic sync
+  - Ensure CLI uses database_manager module for all operations
+  - _Requirements: 11.1, 11.2_
+
+- [ ] 14.6 Write tests for CLI interface
+  - Create `edge/test_cli_interface.py` with tests for menu functions
+  - Test input validation functions
+  - Test CRUD operation handlers with mocked database
+  - Test menu loop and exit functionality
+  - _Requirements: 11.1 through 11.10_
+
+- [ ] 15. Implement web interface for edge device
+- [ ] 15.1 Create Flask web server for edge device
+  - Create new file `edge/web_server.py` with Flask application
+  - Configure Flask to run on port 5000 (configurable via environment variable)
+  - Set up route handlers for web pages and API endpoints
+  - Ensure web server uses database_manager module for all operations
+  - _Requirements: 12.1, 12.2_
+
+- [ ] 15.2 Create HTML template for edge web interface
+  - Create `edge/templates/index.html` based on cloud template design
+  - Include report table with columns: ID, Report ID, Title, Content, Classification, Updated At, Updated By, Sync Status, Actions
+  - Add Create Report button and modal form
+  - Add Edit and Delete action buttons for each report
+  - Add Sync to Cloud button
+  - Add buttons for View All Reports and View Latest Reports
+  - _Requirements: 12.2, 12.3, 12.4, 12.7_
+
+- [ ] 15.3 Implement edge web API endpoints
+  - Implement `GET /api/reports` endpoint to return all local reports as JSON
+  - Implement `GET /api/reports/latest` endpoint to return latest version of each report_id
+  - Implement `POST /api/reports` endpoint to create new report with validation
+  - Implement `PUT /api/reports/<id>` endpoint to update existing report
+  - Implement `DELETE /api/reports/<id>` endpoint to soft delete report
+  - Implement `POST /api/sync` endpoint to trigger cloud synchronization
+  - _Requirements: 12.14_
+
+- [ ] 15.4 Add JavaScript for edge web interface
+  - Create `edge/static/app.js` with AJAX functions for all API calls
+  - Implement dynamic table population from API responses
+  - Implement Create Report form submission with validation
+  - Implement Edit Report form with pre-population and submission
+  - Implement Delete Report confirmation dialog
+  - Implement Sync to Cloud with progress indicator and results display
+  - _Requirements: 12.5, 12.6, 12.8, 12.9, 12.10, 12.11_
+
+- [ ] 15.5 Add sync status indicators to edge web interface
+  - Display sync status for each report (synchronized, pending, failed)
+  - Use color coding: green for synchronized, yellow for pending, red for failed
+  - Update sync status dynamically after sync operations
+  - Show sync timestamp for synchronized reports
+  - _Requirements: 12.7, 12.12_
+
+- [ ] 15.6 Implement form validation in edge web interface
+  - Add client-side validation for report_id format
+  - Add client-side validation for title and content length limits
+  - Add client-side validation for classification dropdown
+  - Display validation error messages near form fields
+  - Prevent form submission if validation fails
+  - _Requirements: 12.6, 12.13_
+
+- [ ] 15.7 Add error handling to edge web interface
+  - Display error messages from API in user-friendly format
+  - Show network error messages when API calls fail
+  - Display validation errors from server-side validation
+  - Add error message display area at top of page
+  - _Requirements: 12.13_
+
+- [ ] 15.8 Integrate web server with edge application
+  - Update `edge/edge_app.py` to support web mode via command-line argument
+  - Add `--web` flag to launch Flask web server instead of automatic sync
+  - Ensure web server can run concurrently with sync operations
+  - Add graceful shutdown handling for web server
+  - _Requirements: 12.1_
+
+- [ ] 15.9 Update Docker configuration for edge web interface
+  - Update `edge/Dockerfile` to expose port 5000
+  - Update `docker-compose.yml` to map edge device port 5000 to host ports
+  - Use different host ports for edge1 (5001) and edge2 (5002)
+  - Add environment variable for web server port configuration
+  - _Requirements: 12.1, 9.3_
+
+- [ ] 15.10 Write tests for edge web interface
+  - Create `edge/test_web_server.py` with tests for all API endpoints
+  - Test GET /api/reports returns all reports
+  - Test POST /api/reports creates report with validation
+  - Test PUT /api/reports/<id> updates report
+  - Test DELETE /api/reports/<id> soft deletes report
+  - Test POST /api/sync triggers synchronization
+  - Test error handling for invalid inputs
+  - _Requirements: 12.1 through 12.14_
+
+- [ ] 16. Create documentation and examples
+- [ ] 16.1 Update README with new features
+  - Document CLI interface usage and commands
+  - Document web interface access and features
   - Document CRUD operations available in edge application
   - Document sync feedback and status reporting
   - Document soft delete functionality
   - Document query filtering options
-  - Update API endpoint documentation
+  - Update API endpoint documentation for both cloud and edge
   - _Requirements: All_
 
-- [ ] 14.2 Create API documentation
-  - Document all REST API endpoints with request/response examples
+- [ ] 16.2 Create API documentation
+  - Document all REST API endpoints for cloud server with request/response examples
+  - Document all REST API endpoints for edge device with request/response examples
   - Document authentication requirements
   - Document error codes and messages
   - Create OpenAPI/Swagger specification file
-  - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.5, 6.1, 7.1, 7.2, 7.3, 7.4, 7.5_
+  - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.5, 6.1, 7.1, 7.2, 7.3, 7.4, 7.5, 12.14_
 
-- [ ] 14.3 Create user guide
-  - Write guide for field analysts on using edge application
-  - Write guide for headquarters staff on using web interface
+- [ ] 16.3 Create user guide
+  - Write guide for field analysts on using CLI interface
+  - Write guide for field analysts on using edge web interface
+  - Write guide for headquarters staff on using cloud web interface
   - Document troubleshooting common issues
+  - Include screenshots or examples of each interface
   - _Requirements: All_

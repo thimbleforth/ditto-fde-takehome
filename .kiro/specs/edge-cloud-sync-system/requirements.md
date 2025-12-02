@@ -143,3 +143,41 @@ This document specifies the requirements for an Edge-to-Cloud Data Synchronizati
 3. THE Cloud Server SHALL provide functionality to view latest versions of reports by report_id
 4. WHEN displaying the shared report_id "shared-report-050", THE Cloud Server SHALL show multiple versions to demonstrate conflict handling
 5. THE Cloud Server SHALL render report data including classification levels, timestamps, and analyst identifiers
+
+### Requirement 11: Edge Device CLI Interface for Report Management
+
+**User Story:** As a field analyst, I want to manage reports through an interactive command-line menu on my edge device, so that I can create, read, update, and delete reports without requiring a graphical interface or network connectivity.
+
+#### Acceptance Criteria
+
+1. THE Edge Device SHALL provide an interactive CLI menu when started in interactive mode
+2. THE CLI menu SHALL display options for: Create Report, View Reports, Update Report, Delete Report, Sync to Cloud, and Exit
+3. WHEN a field analyst selects Create Report, THE Edge Device SHALL prompt for report_id, title, content, and classification, then create the report
+4. WHEN a field analyst selects View Reports, THE Edge Device SHALL display all local reports with their report_id, title, classification, updated_at, and updated_by fields
+5. WHEN a field analyst selects Update Report, THE Edge Device SHALL prompt for report_id, then display current values and prompt for new title, content, and classification
+6. WHEN a field analyst selects Delete Report, THE Edge Device SHALL prompt for report_id and confirm deletion before marking the report as deleted
+7. WHEN a field analyst selects Sync to Cloud, THE Edge Device SHALL execute the synchronization process and display sync results
+8. THE CLI menu SHALL loop continuously until the user selects Exit
+9. THE CLI SHALL validate all user inputs and display error messages for invalid data
+10. THE CLI SHALL display success confirmations after each operation
+
+### Requirement 12: Edge Device Web Interface for Report Management
+
+**User Story:** As a field analyst, I want to manage reports through a local web interface on my edge device, so that I can perform CRUD operations with a user-friendly graphical interface similar to the cloud application.
+
+#### Acceptance Criteria
+
+1. THE Edge Device SHALL run a Flask web server on a configurable local port (default 5000)
+2. THE Edge Device web interface SHALL provide a root URL path that displays the report management page
+3. THE Edge Device web interface SHALL use the same design and layout as the Cloud Server web interface
+4. THE Edge Device web interface SHALL provide buttons for: Create Report, View All Reports, View Latest Reports, and Sync to Cloud
+5. WHEN a field analyst clicks Create Report, THE Edge Device SHALL display a form with fields for report_id, title, content, and classification
+6. WHEN a field analyst submits the create form, THE Edge Device SHALL validate inputs and create the report in the local database
+7. THE Edge Device web interface SHALL display all local reports in a table with columns: ID, Report ID, Title, Content, Classification, Updated At, Updated By, Sync Status, and Actions
+8. WHEN a field analyst clicks an Edit action, THE Edge Device SHALL display a form pre-populated with current report values
+9. WHEN a field analyst submits the edit form, THE Edge Device SHALL update the report and mark it as unsynchronized
+10. WHEN a field analyst clicks a Delete action, THE Edge Device SHALL prompt for confirmation then soft delete the report
+11. WHEN a field analyst clicks Sync to Cloud, THE Edge Device SHALL execute synchronization and display results with success/failure counts
+12. THE Edge Device web interface SHALL indicate sync status for each report (synchronized, pending sync, failed)
+13. THE Edge Device web interface SHALL display error messages for validation failures or operation errors
+14. THE Edge Device web interface SHALL provide REST API endpoints at /api/reports (GET, POST), /api/reports/<id> (PUT, DELETE), and /api/sync (POST)
