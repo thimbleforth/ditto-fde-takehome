@@ -26,8 +26,9 @@ COPY . .
 
 # Run as non-root user for security
 RUN useradd -m appuser
-# RUN mkdir -p /app && chown appuser:appuser /app
-# RUN mkdir -p /app/data && chown appuser:appuser /app/data
+
+# Create log directory and set permissions before switching to non-root user
+RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
 
 USER appuser
 

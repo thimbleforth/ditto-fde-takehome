@@ -289,33 +289,49 @@
   - _Requirements: 3.5_
 
 - [ ] 11. Add health monitoring enhancements
-- [ ] 11.1 Expand health check endpoint
+
+
+
+
+- [x] 11.1 Expand health check endpoint
+
+
   - Add database connectivity check to `/api/health` endpoint
   - Add report count statistics to health response
   - Add last sync timestamp to health response
   - Return HTTP 503 if database is unreachable
   - _Requirements: 6.1, 6.2, 6.4_
 
-- [ ] 11.2 Write tests for health monitoring
+- [x] 11.2 Write tests for health monitoring
+
+
   - Create tests for health endpoint response format
   - Test database connectivity check
   - Test health check without authentication requirement
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
+-
 
 - [ ] 12. Update Docker configuration for enhanced features
-- [ ] 12.1 Update Dockerfiles with logging support
+
+- [x] 12.1 Update Dockerfiles with logging support
+
+
   - Ensure log directories are created in both edge and cloud Dockerfiles
   - Set appropriate permissions for log files
   - Verify non-root user can write to log directories
   - _Requirements: 9.1, 9.2_
 
-- [ ] 12.2 Update docker-compose.yml for log persistence
+- [x] 12.2 Update docker-compose.yml for log persistence
+
+
   - Add volume mounts for log directories
   - Ensure log files persist across container restarts
   - Update environment variables if needed for new features
   - _Requirements: 9.5_
 
-- [ ] 12.3 Test Docker deployment end-to-end
+- [x] 12.3 Test Docker deployment end-to-end
+
+
   - Build and start all containers using docker-compose
   - Verify edge devices can create and sync reports
   - Verify cloud server receives and stores reports

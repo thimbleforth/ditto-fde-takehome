@@ -7,10 +7,11 @@ services:
     volumes:
       - ./keys:/app/keys:ro   # mount public.pem
       - ./cloud/cloud_app.py:/app/cloud_app.py:ro   # mount cloud_app.py
-      - ./cloud/cloud_data:/app/data
+      - ./cloud/cloud_data:/app/data   # persist database and logs
     environment:
       - PUBLIC_KEY_PATH=/app/keys/public.pem
       - CLOUD_DB_PATH=/app/data/cloud_db.sqlite
+      - LOG_FILE_PATH=/app/data/cloud.log
 
   edge1:
     build: ./edge
@@ -20,12 +21,13 @@ services:
     volumes:
       - ./edge/edge_app.py:/app/edge_app.py:ro   # mount edge_app.py
       - ./keys:/app/keys:ro   # mount private.pem
-      - ./edge1_data:/app/data
+      - ./edge1_data:/app/data   # persist database and logs
     environment:
       - PRIVATE_KEY_PATH=/app/keys/private.pem
       - EDGE_USER=edge1
       - CLOUD_URL=http://cloud:8443
       - EDGE_DB_PATH=/app/data/edge_db.sqlite
+      - LOG_FILE_PATH=/app/data/edge.log
 
 # these are two edge instances simulating different edge devices
 # they're using the same codebase but different environment variables
@@ -40,9 +42,10 @@ services:
     volumes:
       - ./edge/edge_app.py:/app/edge_app.py:ro   # mount edge_app.py
       - ./keys:/app/keys:ro   # mount private.pem
-      - ./edge2_data:/app/data
+      - ./edge2_data:/app/data   # persist database and logs
     environment:
       - PRIVATE_KEY_PATH=/app/keys/private.pem
       - EDGE_USER=edge2
       - CLOUD_URL=http://cloud:8443
       - EDGE_DB_PATH=/app/data/edge_db.sqlite
+      - LOG_FILE_PATH=/app/data/edge.log

@@ -228,10 +228,40 @@ def sync():
 
 @app.route("/api/health", methods=["GET"])
 def health():
-    return jsonify({
+    """
+    Health check endpoint with database connectivity and statistics.
+    Returns HTTP 503 if database is unreachable.
+    """
+    health_data = {
         "status": "running",
         "time": datetime.datetime.now(datetime.timezone.utc).isoformat()
-    })
+    }
+    
+    # Check database connectivity and gather statistics
+    try:
+        session = Session()
+        
+        # Test database connectivity by executing a simple query
+        total_reports = session.query(Report).count()
+        health_data["database_status"] = "connected"
+        health_data["total_reports"] = total_reports
+        
+        # Get last sync timestamp (most recent updated_at)
+        latest_report = session.query(Report).order_by(desc(Report.updated_at)).first()
+        if latest_report:
+            health_data["last_sync_timestamp"] = latest_report.updated_at.isoformat()
+        else:
+            health_data["last_sync_timestamp"] = None
+        
+        session.close()
+        return jsonify(health_data), 200
+        
+    except Exception as e:
+        # Database is unreachable or error occurred
+        health_data["status"] = "degraded"
+        health_data["database_status"] = "unreachable"
+        health_data["error"] = str(e)
+        return jsonify(health_data), 503
 
 @app.route("/api/reports", methods=["GET"])
 def get_reports():
