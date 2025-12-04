@@ -102,16 +102,43 @@ with open(PUBLIC_KEY_PATH, "rb") as f:
 JWT_ALGORITHM = "RS256"
 
 def verify_token(token):
+    """
+    Verify JWT token and return payload or error information.
+    
+    Args:
+        token: JWT token string to verify
+    
+    Returns:
+        dict: Either payload with user claims or error dict with 'error' and 'details' keys
+    """
     try:
         payload = jwt.decode(token, PUBLIC_KEY, algorithms=[JWT_ALGORITHM])
         log_info("AUTH", payload.get('user', 'unknown'), "JWT token verified successfully")
         return payload
     except jwt.ExpiredSignatureError:
         log_warning("AUTH", "unknown", "Authentication failed: Token has expired")
-        return None
+        return {
+            "error": "expired_token",
+            "details": "Token has expired"
+        }
+    except jwt.InvalidSignatureError:
+        log_warning("AUTH", "unknown", "Authentication failed: Invalid token signature")
+        return {
+            "error": "invalid_signature",
+            "details": "Token signature verification failed"
+        }
+    except jwt.DecodeError as e:
+        log_warning("AUTH", "unknown", f"Authentication failed: Token decode error - {str(e)}")
+        return {
+            "error": "decode_error",
+            "details": f"Token could not be decoded: {str(e)}"
+        }
     except jwt.InvalidTokenError as e:
         log_warning("AUTH", "unknown", f"Authentication failed: Invalid token - {str(e)}")
-        return None
+        return {
+            "error": "invalid_token",
+            "details": f"Invalid token: {str(e)}"
+        }
     
 
 def fix_timestamp(data):
@@ -140,9 +167,14 @@ def sync():
     
     token = auth_header.split(" ")[1]
     claims = verify_token(token)
-    if not claims:
-        log_warning("/api/sync", user, "Authentication failed: Invalid token")
-        return jsonify({"error": "Invalid token"}), 401
+    
+    # Check if verification returned an error
+    if "error" in claims:
+        log_warning("/api/sync", user, f"Authentication failed: {claims['details']}")
+        return jsonify({
+            "error": claims["error"],
+            "details": claims["details"]
+        }), 401
     
     user = claims.get('user', 'unknown')
     log_info("/api/sync", user, f"Sync request received from user: {user}")

@@ -258,20 +258,31 @@
   - Test retry counter reset after success
   - _Requirements: 2.7_
 
-- [ ] 10. Enhance authentication error handling
-- [ ] 10.1 Improve JWT token error responses
+- [x] 10. Enhance authentication error handling
+
+
+
+
+
+- [x] 10.1 Improve JWT token error responses
+
+
   - Update `verify_token()` in `cloud/cloud_app.py` to return detailed error information
   - Distinguish between expired tokens and invalid signatures
   - Return specific error messages in HTTP 401 responses
   - _Requirements: 3.5_
 
-- [ ] 10.2 Add token regeneration on edge device
+- [x] 10.2 Add token regeneration on edge device
+
+
   - Detect HTTP 401 responses in edge sync engine
   - Automatically regenerate JWT token and retry once
   - Log authentication failures for troubleshooting
   - _Requirements: 3.1, 3.2, 3.3_
 
-- [ ] 10.3 Write tests for authentication error handling
+- [x] 10.3 Write tests for authentication error handling
+
+
   - Create tests for expired token handling
   - Test invalid signature detection
   - Test token regeneration and retry

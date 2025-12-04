@@ -87,12 +87,13 @@ def issue_token():
     return token
 
 
-def sync_single_report(report):
+def sync_single_report(report, retry_auth=True):
     """
     Handle individual report transmission to cloud server.
     
     Args:
         report: Dictionary containing report data
+        retry_auth: Whether to retry once with new token on 401 error (default: True)
     
     Returns:
         dict: Result with status and optional error message
@@ -125,6 +126,21 @@ def sync_single_report(report):
                 "report_id": report["report_id"],
                 "db_id": report["id"]
             }
+        elif r.status_code == 401 and retry_auth:
+            # Authentication failed - try regenerating token and retry once
+            log_warning("SYNC", f"Authentication failed for report {report['report_id']}, regenerating token and retrying")
+            
+            try:
+                error_data = r.json()
+                error_type = error_data.get("error", "unknown")
+                error_details = error_data.get("details", "Unknown authentication error")
+                log_info("SYNC", f"Authentication error type: {error_type} - {error_details}")
+            except Exception:
+                log_warning("SYNC", "Could not parse authentication error response")
+            
+            # Regenerate token and retry (with retry_auth=False to prevent infinite loop)
+            log_info("SYNC", f"Retrying sync for report {report['report_id']} with new token")
+            return sync_single_report(report, retry_auth=False)
         else:
             log_error("SYNC", f"Failed to sync report {report['report_id']}: HTTP {r.status_code} - {r.text}")
             return {
