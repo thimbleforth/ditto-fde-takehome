@@ -89,27 +89,40 @@
   - Update SQLAlchemy model with new column definition
   - _Requirements: 1.4, 4.5_
 
-- [ ] 5. Implement enhanced sync handler in cloud application
-- [ ] 5.1 Add request validation to sync endpoint
+- [x] 5. Implement enhanced sync handler in cloud application
+
+
+
+
+
+
+- [x] 5.1 Add request validation to sync endpoint
+
   - Update `/api/sync` endpoint in `cloud/cloud_app.py` to validate all required fields
   - Check for presence of: report_id, title, content, classification, updated_at, updated_by
   - Return HTTP 400 with detailed error message if validation fails
   - _Requirements: 2.4_
 
-- [ ] 5.2 Handle soft delete synchronization
+
+- [x] 5.2 Handle soft delete synchronization
+
   - Check for `is_deleted` flag in incoming sync requests
   - Store deleted reports with `is_deleted = 1` in cloud database
   - Preserve deletion timestamp and analyst who performed deletion
   - _Requirements: 1.4, 2.8_
 
-- [ ] 5.3 Improve error handling in sync endpoint
+
+- [x] 5.3 Improve error handling in sync endpoint
+
   - Wrap database operations in try-except blocks
   - Return HTTP 500 for database errors with error details
   - Log all sync errors with timestamp and source user
   - Implement transaction rollback on failures
   - _Requirements: 2.4_
 
-- [ ] 5.4 Write unit tests for sync handler
+- [x] 5.4 Write unit tests for sync handler
+
+
   - Create `cloud/test_sync_handler.py` with tests for sync endpoint
   - Test successful report storage
   - Test validation error handling

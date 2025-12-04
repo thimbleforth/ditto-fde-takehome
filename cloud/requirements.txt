@@ -16,4 +16,7 @@ requests==2.32.5
 # pyjwt and cryptography to handle RS256 in PyJWT
 pyjwt[crypto]==2.10.1
 
+# Testing framework
+pytest==8.3.4
+
 # also uses datetime built-in module

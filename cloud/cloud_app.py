@@ -1,5 +1,6 @@
 # cloud_app.py
 import os
+import logging
 from flask import Flask, request, jsonify, render_template
 from sqlalchemy import create_engine, desc
 from sqlalchemy.orm import sessionmaker
@@ -11,6 +12,12 @@ import sqlite3
 CLOUD_DB_PATH = os.getenv("CLOUD_DB_PATH", "/app/data/cloud_db.sqlite")
 
 app = Flask(__name__)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 # Yes we're using a SQLite DB for simplicity here
 # and a Flask server for quick prototyping, that isn't a production-ready WSGI server
 # I only had 90 minutes for this, fite me
@@ -84,24 +91,49 @@ def sync():
     if not claims:
         return jsonify({"error": "Invalid token"}), 401
 
-    # Sync logic: append new record to ledger
+    # Validate request data
     data = request.json
+    if not data:
+        return jsonify({"error": "Invalid request", "details": "Request body is required"}), 400
+    
+    required_fields = ["report_id", "title", "content", "classification", "updated_at", "updated_by"]
+    missing_fields = [field for field in required_fields if field not in data]
+    
+    if missing_fields:
+        return jsonify({
+            "error": "Invalid request",
+            "details": f"Missing required field(s): {', '.join(missing_fields)}"
+        }), 400
+
+    # Sync logic: append new record to ledger
     session = Session()
 
-    data["updated_at"] = fix_timestamp(data)
+    try:
+        data["updated_at"] = fix_timestamp(data)
 
-    new_report = Report(
-        report_id=data["report_id"],
-        title=data["title"],
-        content=data["content"],
-        classification=data.get("classification", "CUI"),
-        updated_at=data["updated_at"],
-        updated_by=claims.get("user", "unknown")
-    )
-    session.add(new_report)
-    session.commit()
+        new_report = Report(
+            report_id=data["report_id"],
+            title=data["title"],
+            content=data["content"],
+            classification=data["classification"],
+            updated_at=data["updated_at"],
+            updated_by=data["updated_by"],
+            is_deleted=data.get("is_deleted", 0)
+        )
+        session.add(new_report)
+        session.commit()
+        session.close()
 
-    return jsonify({"status": "ok"})
+        return jsonify({"status": "ok"})
+    
+    except Exception as e:
+        session.rollback()
+        session.close()
+        app.logger.error(f"Database error during sync from user {claims.get('user', 'unknown')}: {str(e)}")
+        return jsonify({
+            "error": "Internal server error",
+            "details": "Failed to store report"
+        }), 500
 
 @app.route("/api/health", methods=["GET"])
 def health():
