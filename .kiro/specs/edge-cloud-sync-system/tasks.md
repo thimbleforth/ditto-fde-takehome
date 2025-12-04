@@ -78,7 +78,12 @@
   - Test synchronization status updates
   - _Requirements: 2.1, 2.3, 2.6_
 
-- [ ] 4. Enhance cloud database schema for soft deletes
+- [x] 4. Enhance cloud database schema for soft deletes
+
+
+
+
+
   - Add `is_deleted` column to `Report` model in `cloud/data_models.py`
   - Set default value to 0 (not deleted)
   - Update SQLAlchemy model with new column definition

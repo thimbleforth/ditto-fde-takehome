@@ -16,6 +16,7 @@ class Report(Base):
     classification = Column(String(20)) # e.g., CUI, IL4, IL5
     updated_at = Column(DateTime(timezone=True), nullable=False)
     updated_by = Column(String(100)) # analyst ID
+    is_deleted = Column(Integer, default=0) # soft delete flag (0=active, 1=deleted)
 
 # nothing else happens in this .py, the function to create a new record in 'reports' happens inside the cloud_app.py file.
 
