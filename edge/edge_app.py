@@ -2,6 +2,8 @@
 import os, requests, datetime, jwt
 import random # this is purely for random #'s in the demo data
 import logging
+import threading
+import time
 import database_manager
 
 PRIVATE_KEY_PATH = os.getenv("PRIVATE_KEY_PATH", "private.pem")
@@ -176,16 +178,29 @@ def sync_to_cloud():
     
     successful = []
     failed = []
+    skipped = []
     
     # Sync each report individually
     for report in unsync_reports:
+        # Check if report has exceeded retry limit
+        if report.get("retry_count", 0) >= 5:
+            log_warning("SYNC", f"Report {report['report_id']} has exceeded retry limit (5 attempts)")
+            skipped.append({
+                "status": "skipped",
+                "report_id": report["report_id"],
+                "error": "Exceeded maximum retry attempts (5)"
+            })
+            continue
+        
         result = sync_single_report(report)
         
         if result["status"] == "success":
-            # Mark as synchronized in database
+            # Mark as synchronized in database and reset retry counter
             database_manager.mark_as_synchronized(result["db_id"])
             successful.append(result)
         else:
+            # Increment retry counter for failed sync
+            database_manager.increment_retry_count(result["db_id"])
             failed.append(result)
     
     # Build sync summary
@@ -193,10 +208,11 @@ def sync_to_cloud():
         "total": len(unsync_reports),
         "successful": len(successful),
         "failed": len(failed),
-        "reports": successful + failed
+        "skipped": len(skipped),
+        "reports": successful + failed + skipped
     }
     
-    log_info("SYNC", f"Sync operation completed: {len(successful)} successful, {len(failed)} failed")
+    log_info("SYNC", f"Sync operation completed: {len(successful)} successful, {len(failed)} failed, {len(skipped)} skipped")
     
     return summary
 
@@ -220,6 +236,8 @@ def display_sync_summary(summary):
     print(f"Total reports processed: {summary['total']}")
     print(f"Successfully synchronized: {summary['successful']}")
     print(f"Failed synchronizations: {summary['failed']}")
+    if summary.get("skipped", 0) > 0:
+        print(f"Skipped (retry limit exceeded): {summary['skipped']}")
     print("-"*60)
     
     # Display successfully synchronized reports
@@ -237,11 +255,162 @@ def display_sync_summary(summary):
                 print(f"  ✗ {report['report_id']}")
                 print(f"    Error: {report['error']}")
     
+    # Display skipped reports
+    if summary.get("skipped", 0) > 0:
+        print("\nSKIPPED REPORTS (RETRY LIMIT EXCEEDED):")
+        for report in summary["reports"]:
+            if report["status"] == "skipped":
+                print(f"  ⊘ {report['report_id']}")
+                print(f"    Reason: {report['error']}")
+    
     print("="*60 + "\n")
+
+
+def retry_failed_reports():
+    """
+    Attempt to resync failed reports that are eligible for retry.
+    Uses exponential backoff based on retry count.
+    
+    Returns:
+        dict: Retry summary with counts and detailed results
+    """
+    # Get failed reports eligible for retry
+    failed_reports = database_manager.get_failed_reports_for_retry()
+    
+    if not failed_reports:
+        log_info("RETRY", "No failed reports eligible for retry")
+        return {
+            "total": 0,
+            "successful": 0,
+            "failed": 0,
+            "reports": []
+        }
+    
+    log_info("RETRY", f"Found {len(failed_reports)} failed reports eligible for retry")
+    
+    successful = []
+    failed = []
+    skipped = []
+    
+    for report in failed_reports:
+        retry_count = report.get("retry_count", 0)
+        last_retry_at = report.get("last_retry_at")
+        
+        # Calculate backoff delay
+        backoff_delay = database_manager.calculate_backoff_delay(retry_count)
+        
+        # Check if enough time has passed since last retry
+        if last_retry_at:
+            try:
+                last_retry_time = datetime.datetime.fromisoformat(last_retry_at)
+                current_time = datetime.datetime.now(datetime.timezone.utc)
+                time_since_retry = (current_time - last_retry_time).total_seconds()
+                
+                if time_since_retry < backoff_delay:
+                    log_info("RETRY", f"Skipping report {report['report_id']} - backoff delay not met ({time_since_retry:.0f}s < {backoff_delay}s)")
+                    skipped.append({
+                        "status": "skipped",
+                        "report_id": report["report_id"],
+                        "error": f"Backoff delay not met (waiting {backoff_delay - time_since_retry:.0f}s)"
+                    })
+                    continue
+            except (ValueError, TypeError) as e:
+                log_warning("RETRY", f"Could not parse last_retry_at for report {report['report_id']}: {e}")
+        
+        # Attempt to sync the report
+        log_info("RETRY", f"Retrying report {report['report_id']} (attempt {retry_count + 1}/5)")
+        result = sync_single_report(report)
+        
+        if result["status"] == "success":
+            # Mark as synchronized and reset retry counter
+            database_manager.mark_as_synchronized(result["db_id"])
+            successful.append(result)
+            log_info("RETRY", f"Successfully synced report {report['report_id']} on retry")
+        else:
+            # Increment retry counter
+            database_manager.increment_retry_count(result["db_id"])
+            failed.append(result)
+            log_warning("RETRY", f"Retry failed for report {report['report_id']}: {result.get('error', 'Unknown error')}")
+    
+    summary = {
+        "total": len(failed_reports),
+        "successful": len(successful),
+        "failed": len(failed),
+        "skipped": len(skipped),
+        "reports": successful + failed + skipped
+    }
+    
+    log_info("RETRY", f"Retry operation completed: {len(successful)} successful, {len(failed)} failed, {len(skipped)} skipped")
+    
+    return summary
+
+
+def retry_scheduler(interval_seconds=300, stop_event=None):
+    """
+    Background thread that periodically checks for failed reports and retries them.
+    
+    Args:
+        interval_seconds: Time between retry checks (default 300 = 5 minutes)
+        stop_event: Threading event to signal shutdown
+    """
+    log_info("RETRY_SCHEDULER", f"Starting retry scheduler with {interval_seconds}s interval")
+    
+    while True:
+        if stop_event and stop_event.is_set():
+            log_info("RETRY_SCHEDULER", "Retry scheduler stopping")
+            break
+        
+        try:
+            # Wait for the interval or until stop event is set
+            if stop_event:
+                if stop_event.wait(interval_seconds):
+                    break
+            else:
+                time.sleep(interval_seconds)
+            
+            # Attempt to retry failed reports
+            log_info("RETRY_SCHEDULER", "Running scheduled retry check")
+            summary = retry_failed_reports()
+            
+            # Log summary if there were any reports processed
+            if summary["total"] > 0:
+                log_info("RETRY_SCHEDULER", 
+                        f"Retry check completed: {summary['successful']} successful, "
+                        f"{summary['failed']} failed, {summary['skipped']} skipped")
+        
+        except Exception as e:
+            log_error("RETRY_SCHEDULER", f"Error in retry scheduler: {str(e)}")
+            # Continue running even if there's an error
+
+
+def start_retry_scheduler(interval_seconds=300):
+    """
+    Start the retry scheduler in a background thread.
+    
+    Args:
+        interval_seconds: Time between retry checks (default 300 = 5 minutes)
+    
+    Returns:
+        tuple: (thread, stop_event) for controlling the scheduler
+    """
+    stop_event = threading.Event()
+    thread = threading.Thread(
+        target=retry_scheduler,
+        args=(interval_seconds, stop_event),
+        daemon=True,
+        name="RetryScheduler"
+    )
+    thread.start()
+    log_info("RETRY_SCHEDULER", "Retry scheduler thread started")
+    return thread, stop_event
+
 
 if __name__ == "__main__":
     # create the local edge device database
     database_manager.init_db()
+    
+    # Start the retry scheduler in the background (checks every 5 minutes)
+    retry_thread, stop_event = start_retry_scheduler(interval_seconds=300)
 
     # simulate some report creation and syncing
     # example report from edge1:
@@ -312,3 +481,15 @@ if __name__ == "__main__":
     # ergo: just like in the real world, we have a conflict! Both edge devices created a report with the same report_id but different content.
     
     # right now, the cloud app will store both versions as separate records so you have history; but that's because the DB is doubling as a log server for the sake of this demo. In a real-world app, you'd toss the older change and move on with your day.
+    
+    # Keep the main thread alive to allow retry scheduler to run
+    # In a real application, this would be part of a long-running service
+    log_info("MAIN", "Edge application running with retry scheduler. Press Ctrl+C to exit.")
+    try:
+        # Keep main thread alive
+        while True:
+            time.sleep(60)
+    except KeyboardInterrupt:
+        log_info("MAIN", "Shutting down edge application")
+        stop_event.set()
+        retry_thread.join(timeout=5)
