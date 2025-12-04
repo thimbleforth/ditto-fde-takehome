@@ -130,20 +130,31 @@
   - Test database error handling
   - _Requirements: 2.4, 2.5_
 
-- [ ] 6. Enhance report query endpoints
-- [ ] 6.1 Update latest reports query to exclude deleted reports
+- [x] 6. Enhance report query endpoints
+
+
+
+
+
+- [x] 6.1 Update latest reports query to exclude deleted reports
+
+
   - Modify `/api/reports/latest` endpoint in `cloud/cloud_app.py`
   - Filter out reports where `is_deleted = 1` when determining latest version
   - Ensure last write wins logic considers only non-deleted reports
   - _Requirements: 4.2, 4.4_
 
-- [ ] 6.2 Add filtering option for all reports endpoint
+- [x] 6.2 Add filtering option for all reports endpoint
+
+
   - Update `/api/reports` endpoint to support optional query parameter `include_deleted`
   - Default behavior excludes deleted reports
   - When `include_deleted=true`, return all reports including deleted ones
   - _Requirements: 4.1, 4.5, 5.4_
 
-- [ ] 6.3 Write unit tests for query endpoints
+- [x] 6.3 Write unit tests for query endpoints
+
+
   - Create `cloud/test_query_endpoints.py` with tests for report retrieval
   - Test latest reports excludes deleted
   - Test all reports filtering

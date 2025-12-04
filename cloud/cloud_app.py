@@ -145,7 +145,14 @@ def health():
 @app.route("/api/reports", methods=["GET"])
 def get_reports():
     session = Session()
-    reports = session.query(Report).all()
+    # Check for include_deleted query parameter (default: false)
+    include_deleted = request.args.get("include_deleted", "false").lower() == "true"
+    
+    if include_deleted:
+        reports = session.query(Report).all()
+    else:
+        reports = session.query(Report).filter(Report.is_deleted == 0).all()
+    
     report_list = []
     for report in reports:
         report_list.append({
@@ -155,15 +162,16 @@ def get_reports():
             "content": report.content,
             "classification": report.classification,
             "updated_at": report.updated_at.isoformat() if report.updated_at else None,
-            "updated_by": report.updated_by
+            "updated_by": report.updated_by,
+            "is_deleted": report.is_deleted
         })
     return jsonify(report_list)
 
 @app.route("/api/reports/latest", methods=["GET"])
 def get_latest_reports():
     session = Session()
-    # Get all reports ordered by report_id and updated_at in descending order
-    reports = session.query(Report).order_by(Report.report_id, desc(Report.updated_at)).all()
+    # Get all non-deleted reports ordered by report_id and updated_at in descending order
+    reports = session.query(Report).filter(Report.is_deleted == 0).order_by(Report.report_id, desc(Report.updated_at)).all()
 
     latest_by_id = {}
     for r in reports:
