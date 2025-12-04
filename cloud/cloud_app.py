@@ -10,14 +10,59 @@ import datetime
 import sqlite3
 
 CLOUD_DB_PATH = os.getenv("CLOUD_DB_PATH", "/app/data/cloud_db.sqlite")
+LOG_FILE_PATH = os.getenv("LOG_FILE_PATH", "/app/data/cloud.log")
 
 app = Flask(__name__)
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+def setup_logging():
+    """Configure logging with file handler and console handler."""
+    # Create logger
+    logger = logging.getLogger('cloud_app')
+    logger.setLevel(logging.INFO)
+    
+    # Prevent duplicate handlers
+    if logger.handlers:
+        return logger
+    
+    # Create formatters
+    formatter = logging.Formatter(
+        '%(asctime)s - %(levelname)s - [%(endpoint)s] - [User: %(user)s] - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    # File handler
+    try:
+        os.makedirs(os.path.dirname(LOG_FILE_PATH), exist_ok=True)
+        file_handler = logging.FileHandler(LOG_FILE_PATH)
+        file_handler.setLevel(logging.INFO)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+    except Exception as e:
+        print(f"Warning: Could not create log file handler: {e}")
+    
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+    
+    return logger
+
+# Initialize logger
+logger = setup_logging()
+
+def log_info(endpoint, user, message):
+    """Log info message with endpoint and user context."""
+    logger.info(message, extra={'endpoint': endpoint, 'user': user})
+
+def log_error(endpoint, user, message):
+    """Log error message with endpoint and user context."""
+    logger.error(message, extra={'endpoint': endpoint, 'user': user})
+
+def log_warning(endpoint, user, message):
+    """Log warning message with endpoint and user context."""
+    logger.warning(message, extra={'endpoint': endpoint, 'user': user})
 # Yes we're using a SQLite DB for simplicity here
 # and a Flask server for quick prototyping, that isn't a production-ready WSGI server
 # I only had 90 minutes for this, fite me
@@ -59,10 +104,13 @@ JWT_ALGORITHM = "RS256"
 def verify_token(token):
     try:
         payload = jwt.decode(token, PUBLIC_KEY, algorithms=[JWT_ALGORITHM])
+        log_info("AUTH", payload.get('user', 'unknown'), "JWT token verified successfully")
         return payload
     except jwt.ExpiredSignatureError:
+        log_warning("AUTH", "unknown", "Authentication failed: Token has expired")
         return None
-    except jwt.InvalidTokenError:
+    except jwt.InvalidTokenError as e:
+        log_warning("AUTH", "unknown", f"Authentication failed: Invalid token - {str(e)}")
         return None
     
 
@@ -82,24 +130,34 @@ def fix_timestamp(data):
 # --- Routes ---
 @app.route("/api/sync", methods=["POST"])
 def sync():
+    user = "unknown"
+    
     # Authentication
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
+        log_warning("/api/sync", user, "Authentication failed: Missing or invalid Authorization header")
         return jsonify({"error": "Unauthorized"}), 401
+    
     token = auth_header.split(" ")[1]
     claims = verify_token(token)
     if not claims:
+        log_warning("/api/sync", user, "Authentication failed: Invalid token")
         return jsonify({"error": "Invalid token"}), 401
+    
+    user = claims.get('user', 'unknown')
+    log_info("/api/sync", user, f"Sync request received from user: {user}")
 
     # Validate request data
     data = request.json
     if not data:
+        log_warning("/api/sync", user, "Invalid request: Request body is required")
         return jsonify({"error": "Invalid request", "details": "Request body is required"}), 400
     
     required_fields = ["report_id", "title", "content", "classification", "updated_at", "updated_by"]
     missing_fields = [field for field in required_fields if field not in data]
     
     if missing_fields:
+        log_warning("/api/sync", user, f"Invalid request: Missing required field(s): {', '.join(missing_fields)}")
         return jsonify({
             "error": "Invalid request",
             "details": f"Missing required field(s): {', '.join(missing_fields)}"
@@ -124,12 +182,13 @@ def sync():
         session.commit()
         session.close()
 
+        log_info("/api/sync", user, f"Successfully stored report: {data['report_id']}")
         return jsonify({"status": "ok"})
     
     except Exception as e:
         session.rollback()
         session.close()
-        app.logger.error(f"Database error during sync from user {claims.get('user', 'unknown')}: {str(e)}")
+        log_error("/api/sync", user, f"Database error during sync: {str(e)}")
         return jsonify({
             "error": "Internal server error",
             "details": "Failed to store report"
