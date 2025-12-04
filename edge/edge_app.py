@@ -36,8 +36,17 @@ def init_db():
             content TEXT,
             classification TEXT,
             updated_at TEXT,
-            updated_by TEXT
+            updated_by TEXT,
+            is_deleted INTEGER DEFAULT 0,
+            is_synchronized INTEGER DEFAULT 0
         )
+    """)
+    # Create indexes for query performance
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_report_id ON reports(report_id)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_synchronized ON reports(is_synchronized)
     """)
     conn.commit()
     conn.close()
@@ -47,9 +56,9 @@ def create_report(report_id, title, content, classification, analyst):
     conn = sqlite3.connect(EDGE_DB_PATH)
     cur = conn.cursor()
     cur.execute(
-        "INSERT INTO reports (report_id, title, content, classification, updated_at, updated_by) VALUES (?,?,?,?,?,?)",
+        "INSERT INTO reports (report_id, title, content, classification, updated_at, updated_by, is_deleted, is_synchronized) VALUES (?,?,?,?,?,?,?,?)",
         (report_id, title, content, classification,
-         datetime.datetime.now(datetime.timezone.utc).isoformat(), analyst)
+         datetime.datetime.now(datetime.timezone.utc).isoformat(), analyst, 0, 0)
     )
     conn.commit()
 
