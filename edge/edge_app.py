@@ -1,18 +1,25 @@
 # edge_app.py
-import os, requests, datetime, jwt,sqlite3
+import os, requests, datetime, jwt
 import random # this is purely for random #'s in the demo data
+import database_manager
 
 PRIVATE_KEY_PATH = os.getenv("PRIVATE_KEY_PATH", "private.pem")
 CLOUD_URL = os.getenv("CLOUD_URL", "http://cloud:8443")
 EDGE_USER = os.getenv("EDGE_USER")
-EDGE_DB_PATH = os.getenv("EDGE_DB_PATH", "/app/data/edge_db.sqlite")
-
-with open(PRIVATE_KEY_PATH, "rb") as f:
-    PRIVATE_KEY = f.read()
 
 JWT_ALGORITHM = "RS256"
 # asymmetric encryption with RSA keys
 # works better for NIST compliance
+
+_PRIVATE_KEY = None
+
+def _load_private_key():
+    """Load private key from file (lazy loading for testability)."""
+    global _PRIVATE_KEY
+    if _PRIVATE_KEY is None:
+        with open(PRIVATE_KEY_PATH, "rb") as f:
+            _PRIVATE_KEY = f.read()
+    return _PRIVATE_KEY
 
 def issue_token():
     # create a token valid for 30 minutes
@@ -21,74 +28,155 @@ def issue_token():
         "iat": datetime.datetime.now(datetime.timezone.utc),
         "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=30)
     }
-    token = jwt.encode(payload, PRIVATE_KEY, algorithm=JWT_ALGORITHM)
+    token = jwt.encode(payload, _load_private_key(), algorithm=JWT_ALGORITHM)
     return token
 
-# including this here just to create the DB schema on the edge device
-def init_db():
-    conn = sqlite3.connect(EDGE_DB_PATH)
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS reports (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            report_id TEXT,
-            title TEXT,
-            content TEXT,
-            classification TEXT,
-            updated_at TEXT,
-            updated_by TEXT,
-            is_deleted INTEGER DEFAULT 0,
-            is_synchronized INTEGER DEFAULT 0
-        )
-    """)
-    # Create indexes for query performance
-    cur.execute("""
-        CREATE INDEX IF NOT EXISTS idx_report_id ON reports(report_id)
-    """)
-    cur.execute("""
-        CREATE INDEX IF NOT EXISTS idx_synchronized ON reports(is_synchronized)
-    """)
-    conn.commit()
-    conn.close()
 
+def sync_single_report(report):
+    """
+    Handle individual report transmission to cloud server.
+    
+    Args:
+        report: Dictionary containing report data
+    
+    Returns:
+        dict: Result with status and optional error message
+    """
+    payload = {
+        "report_id": report["report_id"],
+        "title": report["title"],
+        "content": report["content"],
+        "classification": report["classification"],
+        "updated_at": report["updated_at"],
+        "updated_by": report["updated_by"]
+    }
+    
+    # Add is_deleted flag if present
+    if report.get("is_deleted"):
+        payload["is_deleted"] = report["is_deleted"]
+    
+    token = issue_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    try:
+        r = requests.post(f"{CLOUD_URL}/api/sync", json=payload, headers=headers, timeout=30)
+        
+        if r.status_code == 200:
+            return {
+                "status": "success",
+                "report_id": report["report_id"],
+                "db_id": report["id"]
+            }
+        else:
+            return {
+                "status": "failed",
+                "report_id": report["report_id"],
+                "error": f"HTTP {r.status_code}: {r.text}"
+            }
+    except requests.exceptions.ConnectionError as e:
+        return {
+            "status": "failed",
+            "report_id": report["report_id"],
+            "error": f"Connection failed: {str(e)}"
+        }
+    except requests.exceptions.Timeout as e:
+        return {
+            "status": "failed",
+            "report_id": report["report_id"],
+            "error": f"Request timeout: {str(e)}"
+        }
+    except Exception as e:
+        return {
+            "status": "failed",
+            "report_id": report["report_id"],
+            "error": f"Unexpected error: {str(e)}"
+        }
 
-def create_report(report_id, title, content, classification, analyst):
-    conn = sqlite3.connect(EDGE_DB_PATH)
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO reports (report_id, title, content, classification, updated_at, updated_by, is_deleted, is_synchronized) VALUES (?,?,?,?,?,?,?,?)",
-        (report_id, title, content, classification,
-         datetime.datetime.now(datetime.timezone.utc).isoformat(), analyst, 0, 0)
-    )
-    conn.commit()
 
 def sync_to_cloud():
-    # this sync runs through the whole sqlitedb and sends each record to the cloud app
-    # in a real-world app, you'd want to track what had already been sent
-    # and that would be another flag you put down in data_models.py
-
-    conn = sqlite3.connect(EDGE_DB_PATH)
-    cur = conn.cursor()
-    for row in cur.execute("SELECT report_id, title, content, classification, updated_at, updated_by FROM reports"):
-        payload = {
-            "report_id": row[0],
-            "title": row[1],
-            "content": row[2],
-            "classification": row[3],
-            "updated_at": row[4],
-            "updated_by": row[5]
+    """
+    Synchronize all unsynchronized reports to the cloud server.
+    
+    Returns:
+        dict: Sync summary with counts and detailed results
+    """
+    # Get all unsynchronized reports from database
+    unsync_reports = database_manager.get_unsynchronized_reports()
+    
+    if not unsync_reports:
+        return {
+            "total": 0,
+            "successful": 0,
+            "failed": 0,
+            "reports": []
         }
-        token = issue_token()
-        headers = {"Authorization": f"Bearer {token}"}
-        try:
-            r = requests.post(f"{CLOUD_URL}/api/sync", json=payload, headers=headers)
-            print("Sync result:", r.json())
-        except Exception as e:
-            print("Sync failed:", e)
+    
+    successful = []
+    failed = []
+    
+    # Sync each report individually
+    for report in unsync_reports:
+        result = sync_single_report(report)
+        
+        if result["status"] == "success":
+            # Mark as synchronized in database
+            database_manager.mark_as_synchronized(result["db_id"])
+            successful.append(result)
+        else:
+            failed.append(result)
+    
+    # Build sync summary
+    summary = {
+        "total": len(unsync_reports),
+        "successful": len(successful),
+        "failed": len(failed),
+        "reports": successful + failed
+    }
+    
+    return summary
+
+
+def display_sync_summary(summary):
+    """
+    Print sync results to console with detailed information.
+    
+    Args:
+        summary: Dictionary containing sync summary with counts and report details
+    """
+    print("\n" + "="*60)
+    print("SYNCHRONIZATION SUMMARY")
+    print("="*60)
+    
+    if summary["total"] == 0:
+        print("No reports to synchronize.")
+        print("="*60 + "\n")
+        return
+    
+    print(f"Total reports processed: {summary['total']}")
+    print(f"Successfully synchronized: {summary['successful']}")
+    print(f"Failed synchronizations: {summary['failed']}")
+    print("-"*60)
+    
+    # Display successfully synchronized reports
+    if summary["successful"] > 0:
+        print("\nSUCCESSFULLY SYNCHRONIZED REPORTS:")
+        for report in summary["reports"]:
+            if report["status"] == "success":
+                print(f"  ✓ {report['report_id']}")
+    
+    # Display failed synchronizations with error details
+    if summary["failed"] > 0:
+        print("\nFAILED SYNCHRONIZATIONS:")
+        for report in summary["reports"]:
+            if report["status"] == "failed":
+                print(f"  ✗ {report['report_id']}")
+                print(f"    Error: {report['error']}")
+    
+    print("="*60 + "\n")
 
 if __name__ == "__main__":
     # create the local edge device database
-    init_db()
+    database_manager.init_db()
 
     # simulate some report creation and syncing
     # example report from edge1:
@@ -99,18 +187,18 @@ if __name__ == "__main__":
             "report_id": f"edge1-report-{rand_suffix}",
             "content": "This is a report created at edge device #1.",
             "classification": "IL4",
-            "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "updated_by": EDGE_USER
         }
 
-        create_report(
+        database_manager.create_report(
             report1["report_id"],
             report1["title"],
             report1["content"],
             report1["classification"],
             report1["updated_by"]
         )
-        sync_to_cloud()
+        summary = sync_to_cloud()
+        display_sync_summary(summary)
     elif EDGE_USER == "edge2":
         rand_suffix = random.randint(1000, 9999)
         report2 = {
@@ -118,39 +206,41 @@ if __name__ == "__main__":
             "report_id": f"edge2-report-{rand_suffix}",
             "content": "This is a report created at edge device #2.",
             "classification": "CUI",
-            "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "updated_by": EDGE_USER
         }
 
-        create_report(
+        database_manager.create_report(
             report2["report_id"],
             report2["title"],
             report2["content"],
             report2["classification"],
             report2["updated_by"]
         )
-        sync_to_cloud()
+        summary = sync_to_cloud()
+        display_sync_summary(summary)
     
     # and now, for two edge devices to edit the same report ID separately, report 050.
     if EDGE_USER == "edge1":
-        create_report(
+        database_manager.create_report(
             f"shared-report-050",
             "Shared Report from Edge 1",
             "This is the version from edge device #1.",
             "IL5",
             EDGE_USER
         )
-        sync_to_cloud()
+        summary = sync_to_cloud()
+        display_sync_summary(summary)
 
     if EDGE_USER == "edge2":
-        create_report(
+        database_manager.create_report(
             f"shared-report-050",
             "Shared Report from Edge 2",
             "This is the version from edge device #2.",
             "IL5",
             EDGE_USER
         )
-        sync_to_cloud()
+        summary = sync_to_cloud()
+        display_sync_summary(summary)
 
     # these containers are running this exact same logic at the exact same time when they spawn... so whoever gets there first is a matter of fractions of a second. It probably won't be the same every time.
 
