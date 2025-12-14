@@ -70,9 +70,19 @@ def log_warning(endpoint, user, message):
 # I only had 90 minutes for this, fite me
 
 # --- Database setup ---
-engine = create_engine(f"sqlite:///{CLOUD_DB_PATH}")   # swap for Postgres in production, sqlitedb is fine for now
-Session = sessionmaker(bind=engine)
-Base.metadata.create_all(engine)
+def _get_engine():
+    return create_engine(f"sqlite:///{CLOUD_DB_PATH}")
+
+
+def get_session():
+    """Create a new SQLAlchemy session bound to the configured DB.
+
+    Ensures the database schema exists by calling create_all on the engine.
+    """
+    engine = _get_engine()
+    Base.metadata.create_all(engine)
+    SessionLocal = sessionmaker(bind=engine)
+    return SessionLocal()
 
 # including this here just to create the DB schema on the edge device
 def init_db():
@@ -283,7 +293,7 @@ def sync():
         return jsonify({"error": "Invalid request", "details": details}), 400
 
     # Sync logic: append new record to ledger
-    session = Session()
+    session = get_session()
 
     try:
         data["updated_at"] = fix_timestamp(data)
@@ -326,7 +336,7 @@ def health():
     
     # Check database connectivity and gather statistics
     try:
-        session = Session()
+        session = get_session()
         
         # Test database connectivity by executing a simple query
         total_reports = session.query(Report).count()
@@ -352,7 +362,7 @@ def health():
 
 @app.route("/api/reports", methods=["GET"])
 def get_reports():
-    session = Session()
+    session = get_session()
     # Check for include_deleted query parameter (default: false)
     include_deleted = request.args.get("include_deleted", "false").lower() == "true"
     
@@ -377,7 +387,7 @@ def get_reports():
 
 @app.route("/api/reports/latest", methods=["GET"])
 def get_latest_reports():
-    session = Session()
+    session = get_session()
     # Get all non-deleted reports ordered by report_id and updated_at in descending order
     reports = session.query(Report).filter(Report.is_deleted == 0).order_by(Report.report_id, desc(Report.updated_at)).all()
 

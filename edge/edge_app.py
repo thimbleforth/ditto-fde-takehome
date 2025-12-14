@@ -147,6 +147,7 @@ def sync_single_report(report, retry_auth=True):
             return {
                 "status": "failed",
                 "report_id": report["report_id"],
+                "db_id": report.get("id"),
                 "error": f"HTTP {r.status_code}: {r.text}"
             }
     except requests.exceptions.ConnectionError as e:
@@ -154,6 +155,7 @@ def sync_single_report(report, retry_auth=True):
         return {
             "status": "failed",
             "report_id": report["report_id"],
+            "db_id": report.get("id"),
             "error": f"Connection failed: {str(e)}"
         }
     except requests.exceptions.Timeout as e:
@@ -161,6 +163,7 @@ def sync_single_report(report, retry_auth=True):
         return {
             "status": "failed",
             "report_id": report["report_id"],
+            "db_id": report.get("id"),
             "error": f"Request timeout: {str(e)}"
         }
     except Exception as e:
@@ -168,6 +171,7 @@ def sync_single_report(report, retry_auth=True):
         return {
             "status": "failed",
             "report_id": report["report_id"],
+            "db_id": report.get("id"),
             "error": f"Unexpected error: {str(e)}"
         }
 
@@ -427,6 +431,7 @@ if __name__ == "__main__":
     database_manager.init_db()
     parser = argparse.ArgumentParser()
     parser.add_argument("--cli", action="store_true", help="Run interactive CLI instead of demo mode")
+    parser.add_argument("--web", action="store_true", help="Run Flask web server for edge device")
     args = parser.parse_args()
 
     # Start the retry scheduler in the background (checks every 5 minutes)
@@ -441,6 +446,20 @@ if __name__ == "__main__":
         retry_thread.join(timeout=5)
         log_info("MAIN", "CLI session ended; exiting.")
         raise SystemExit(0)
+
+    # If web flag is set, run the Flask web server and keep scheduler running
+    if args.web:
+        from web_server import app as webapp
+        port = int(os.getenv("EDGE_WEB_PORT", "5000"))
+        log_info("MAIN", f"Starting web server on port {port}")
+        try:
+            webapp.run(host="0.0.0.0", port=port)
+        except KeyboardInterrupt:
+            log_info("MAIN", "Web server shutting down")
+        finally:
+            stop_event.set()
+            retry_thread.join(timeout=5)
+            raise SystemExit(0)
 
     # simulate some report creation and syncing
     # example report from edge1:

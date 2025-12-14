@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edge Device - Reports</title>
+  <style>
+    /* Copied design language from cloud app */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 2em; }
+    .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 2em; }
+    h1 { color: #333; margin-bottom: 0.25em; font-size: 1.8em; }
+    .subtitle { color: #666; margin-bottom: 1.5em; }
+    .button-group { display:flex; gap: 1em; margin-bottom: 1em; flex-wrap:wrap }
+    button { background: linear-gradient(135deg,#667eea 0%,#764ba2 100%); color: white; border: none; padding: 0.6em 1em; border-radius:6px; cursor:pointer; font-weight:600 }
+    .loading { display:none; text-align:center; padding:1em; color:#667eea }
+    .loading.active { display:block }
+    .spinner { border:4px solid #f3f3f3; border-top:4px solid #667eea; border-radius:50%; width:28px; height:28px; animation:spin 1s linear infinite; margin:0 auto }
+    @keyframes spin { 0%{transform:rotate(0)}100%{transform:rotate(360deg)} }
+    .error-message { background:#fee; border:1px solid #fcc; color:#c33; padding:1em; border-radius:6px; margin-bottom:1em; display:none }
+    .error-message.active { display:block }
+    .table-container{ overflow-x:auto; margin-top:1em }
+    table { width:100%; border-collapse:collapse; background:white; }
+    thead { background: linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:white }
+    th { padding:0.75em; text-align:left; font-weight:600 }
+    td { padding:0.6em; border-bottom:1px solid #eee }
+    tr:hover { background:#f8f9ff }
+    .deleted { background:#ffe6e6; opacity:0.8 }
+    .status-badge { display:inline-block; padding:0.2em 0.5em; border-radius:8px; font-weight:600; font-size:0.8em }
+    .status-synced { background:#d4edda; color:#155724 }
+    .status-pending { background:#fff3cd; color:#664d03 }
+    .status-failed { background:#f8d7da; color:#842029 }
+    .actions button { margin-right:0.5em }
+    #createForm { display:none; margin-top:1em; background:#f8f9fa; padding:1em; border-radius:8px }
+    label { display:block; margin-top:0.5em; font-size:0.9em }
+    input[type=text], textarea, select { width:100%; padding:0.5em; margin-top:0.25em; border-radius:6px; border:1px solid #ddd }
+    .modal { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); background:white; padding:1.25em; border-radius:8px; box-shadow:0 10px 40px rgba(0,0,0,0.25); display:none; min-width:320px }
+    .modal.active { display:block }
+    .row-actions { display:flex; gap:0.5em }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Edge Reports</h1>
+    <p class="subtitle">Local report management and sync</p>
+
+    <div class="button-group">
+      <button onclick="getReports()">Get All Reports</button>
+      <button onclick="getLatestReports()">Get Latest Reports</button>
+      <button onclick="openCreateModal()">Create Report</button>
+      <button onclick="syncToCloud()">Sync To Cloud</button>
+    </div>
+
+    <div class="error-message" id="errorMessage"></div>
+    <div class="loading" id="loading"><div class="spinner"></div><div id="loadingText">Loading...</div></div>
+
+    <div id="output"></div>
+  </div>
+
+  <div class="modal" id="modal">
+    <h3 id="modalTitle">Create Report</h3>
+    <div style="margin-top:0.5em">
+      <label>Report ID
+        <input type="text" id="report_id" />
+      </label>
+      <label>Title
+        <input type="text" id="title" />
+      </label>
+      <label>Content
+        <textarea id="content" rows="4"></textarea>
+      </label>
+      <label>Classification
+        <select id="classification"><option value="CUI">CUI</option><option value="IL4">IL4</option><option value="IL5">IL5</option></select>
+      </label>
+      <label>Updated By
+        <input type="text" id="updated_by" />
+      </label>
+      <div style="margin-top:0.75em; display:flex; gap:0.5em">
+        <button id="saveBtn">Save</button>
+        <button onclick="closeModal(); return false;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

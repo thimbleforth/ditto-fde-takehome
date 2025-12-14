@@ -18,6 +18,8 @@ services:
     container_name: edge_app1
     depends_on:
       - cloud
+    ports:
+      - "5001:5000"
     volumes:
       - ./edge/edge_app.py:/app/edge_app.py:ro   # mount edge_app.py
       - ./keys:/app/keys:ro   # mount private.pem
@@ -28,6 +30,7 @@ services:
       - CLOUD_URL=http://cloud:8443
       - EDGE_DB_PATH=/app/data/edge_db.sqlite
       - LOG_FILE_PATH=/app/data/edge.log
+      - EDGE_WEB_PORT=5000
 
 # these are two edge instances simulating different edge devices
 # they're using the same codebase but different environment variables
@@ -39,6 +42,8 @@ services:
     container_name: edge_app2
     depends_on:
       - cloud
+    ports:
+      - "5002:5000"
     volumes:
       - ./edge/edge_app.py:/app/edge_app.py:ro   # mount edge_app.py
       - ./keys:/app/keys:ro   # mount private.pem
@@ -49,3 +54,4 @@ services:
       - CLOUD_URL=http://cloud:8443
       - EDGE_DB_PATH=/app/data/edge_db.sqlite
       - LOG_FILE_PATH=/app/data/edge.log
+      - EDGE_WEB_PORT=5000

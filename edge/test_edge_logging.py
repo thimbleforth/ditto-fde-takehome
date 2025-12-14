@@ -1,4 +1,4 @@
-# test_logging.py
+# test_edge_logging.py
 import unittest
 import os
 import tempfile

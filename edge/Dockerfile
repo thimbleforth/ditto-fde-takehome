@@ -33,9 +33,11 @@ RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
 USER appuser
 
 
-# Expose port (adjust for edge/cloud service)
-# I don't think I need any of these but we'll see.
-# EXPOSE 5000
+# Expose port for web server
+EXPOSE 5000
+
+# Allow configuring the web server port via environment variable
+ENV EDGE_WEB_PORT=5000
 
 # Default command to run the edge app
 CMD ["python", "edge_app.py"]
