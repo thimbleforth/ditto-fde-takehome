@@ -85,6 +85,7 @@ The architecture follows an eventually consistent model where edge devices maint
 ### Component Responsibilities
 
 **Edge Application**:
+
 - Local report CRUD operations via CLI and web interface
 - Interactive CLI menu for report management
 - Local Flask web server for browser-based report management
@@ -94,6 +95,7 @@ The architecture follows an eventually consistent model where edge devices maint
 - Offline operation support
 
 **Cloud Application**:
+
 - JWT token verification
 - Report ingestion and storage
 - Conflict resolution (last write wins)
@@ -104,6 +106,7 @@ The architecture follows an eventually consistent model where edge devices maint
 ### Technology Stack
 
 **Edge Device**:
+
 - Python 3.x
 - Flask (local web server)
 - SQLite3 (local database)
@@ -113,6 +116,7 @@ The architecture follows an eventually consistent model where edge devices maint
 - Jinja2 (template rendering for local web UI)
 
 **Cloud Server**:
+
 - Python 3.x
 - Flask (web framework)
 - SQLAlchemy (ORM)
@@ -121,6 +125,7 @@ The architecture follows an eventually consistent model where edge devices maint
 - Jinja2 (template rendering)
 
 **Infrastructure**:
+
 - Docker containers
 - Docker Compose (orchestration)
 - Volume mounts for data persistence
@@ -135,12 +140,14 @@ The architecture follows an eventually consistent model where edge devices maint
 **Purpose**: Manages local SQLite database operations for report storage and retrieval.
 
 **Responsibilities**:
+
 - Initialize database schema on first run
 - Execute CRUD operations on reports table
 - Track synchronization status of reports
 - Handle database connections and transactions
 
 **Key Functions**:
+
 ```python
 init_db() -> None
 create_report(report_id, title, content, classification, analyst) -> int
@@ -153,6 +160,7 @@ mark_as_synchronized(report_id) -> None
 ```
 
 **Database Schema**:
+
 ```sql
 CREATE TABLE reports (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -174,18 +182,21 @@ CREATE TABLE reports (
 **Purpose**: Generates and signs JWT tokens for authentication with the cloud server.
 
 **Responsibilities**:
+
 - Load RSA private key from secure storage
 - Generate JWT tokens with appropriate claims
 - Set token expiration times
 - Sign tokens using RS256 algorithm
 
 **Key Functions**:
+
 ```python
 load_private_key(key_path) -> bytes
 issue_token(user_id) -> str
 ```
 
 **Token Payload Structure**:
+
 ```json
 {
   "user": "edge1",
@@ -199,6 +210,7 @@ issue_token(user_id) -> str
 **Purpose**: Orchestrates synchronization of local reports to the cloud server.
 
 **Responsibilities**:
+
 - Identify unsynchronized reports
 - Transmit reports to cloud endpoint
 - Handle authentication headers
@@ -207,6 +219,7 @@ issue_token(user_id) -> str
 - Provide user feedback on sync operations
 
 **Key Functions**:
+
 ```python
 sync_to_cloud() -> dict  # Returns sync summary
 sync_single_report(report) -> bool
@@ -215,6 +228,7 @@ display_sync_summary(results) -> None
 ```
 
 **Sync Summary Structure**:
+
 ```python
 {
     "total": 10,
@@ -232,6 +246,7 @@ display_sync_summary(results) -> None
 **Purpose**: Provides interactive command-line menu for report management on edge devices.
 
 **Responsibilities**:
+
 - Display interactive menu with CRUD options
 - Prompt user for input with validation
 - Execute database operations based on user selections
@@ -239,6 +254,7 @@ display_sync_summary(results) -> None
 - Loop continuously until user exits
 
 **Key Functions**:
+
 ```python
 display_menu() -> None
 get_user_choice() -> int
@@ -252,6 +268,7 @@ validate_report_id(value) -> bool
 ```
 
 **Menu Structure**:
+
 ```
 === Edge Device Report Management ===
 1. Create Report
@@ -264,6 +281,7 @@ Enter your choice (1-6):
 ```
 
 **User Interaction Flow**:
+
 1. Display menu options
 2. Get user choice (1-6)
 3. Execute corresponding function
@@ -275,6 +293,7 @@ Enter your choice (1-6):
 **Purpose**: Provides browser-based report management interface on edge devices.
 
 **Responsibilities**:
+
 - Run Flask web server on local port
 - Serve HTML interface for report management
 - Provide REST API endpoints for CRUD operations
@@ -283,6 +302,7 @@ Enter your choice (1-6):
 - Mirror cloud interface design and functionality
 
 **Key Functions**:
+
 ```python
 run_web_server(port=5000) -> None
 render_index() -> str
@@ -295,6 +315,7 @@ validate_report_data(data) -> tuple[bool, str]
 ```
 
 **API Endpoints**:
+
 - `GET /` - Render main report management page
 - `GET /api/reports` - Retrieve all local reports
 - `GET /api/reports/latest` - Retrieve latest version of each report
@@ -304,6 +325,7 @@ validate_report_data(data) -> tuple[bool, str]
 - `POST /api/sync` - Trigger synchronization to cloud
 
 **Web Interface Features**:
+
 - Report table with columns: ID, Report ID, Title, Content, Classification, Updated At, Updated By, Sync Status, Actions
 - Create Report button and modal form
 - Edit/Delete action buttons for each report
@@ -319,6 +341,7 @@ validate_report_data(data) -> tuple[bool, str]
 **Purpose**: Validates JWT tokens from edge devices before processing requests.
 
 **Responsibilities**:
+
 - Load RSA public key from secure storage
 - Extract Bearer tokens from Authorization headers
 - Verify token signatures
@@ -326,6 +349,7 @@ validate_report_data(data) -> tuple[bool, str]
 - Extract user claims for audit logging
 
 **Key Functions**:
+
 ```python
 load_public_key(key_path) -> bytes
 verify_token(token) -> dict | None
@@ -337,6 +361,7 @@ extract_bearer_token(auth_header) -> str | None
 **Purpose**: Processes incoming report synchronization requests from edge devices.
 
 **Responsibilities**:
+
 - Validate incoming report data
 - Parse and normalize timestamps
 - Store reports in database
@@ -344,6 +369,7 @@ extract_bearer_token(auth_header) -> str | None
 - Return synchronization status
 
 **Key Functions**:
+
 ```python
 handle_sync_request(data, claims) -> tuple[dict, int]
 validate_report_data(data) -> bool
@@ -354,6 +380,7 @@ store_report(report_data, user_id) -> int
 **API Endpoint**: `POST /api/sync`
 
 **Request Format**:
+
 ```json
 {
   "report_id": "edge1-report-1234",
@@ -366,6 +393,7 @@ store_report(report_data, user_id) -> int
 ```
 
 **Response Format**:
+
 ```json
 {
   "status": "ok"
@@ -377,12 +405,14 @@ store_report(report_data, user_id) -> int
 **Purpose**: Provides API endpoints for retrieving reports and audit history.
 
 **Responsibilities**:
+
 - Query all reports including historical versions
 - Query latest versions using last write wins logic
 - Format responses with proper timestamp serialization
 - Support filtering and ordering
 
 **Key Functions**:
+
 ```python
 get_all_reports() -> list[dict]
 get_latest_reports() -> list[dict]
@@ -390,6 +420,7 @@ format_report_response(report) -> dict
 ```
 
 **API Endpoints**:
+
 - `GET /api/reports` - Returns all report versions
 - `GET /api/reports/latest` - Returns latest version of each report_id
 
@@ -398,17 +429,20 @@ format_report_response(report) -> dict
 **Purpose**: Provides HTML interface for viewing synchronized reports.
 
 **Responsibilities**:
+
 - Render report data in user-friendly format
 - Display sync status and conflict information
 - Provide buttons for fetching all vs latest reports
 - Show classification levels and audit information
 
 **Key Functions**:
+
 ```python
 render_index() -> str
 ```
 
 **Template Structure**:
+
 - Main page with report display area
 - Buttons for "Get Reports" and "Get Latest Reports"
 - JavaScript for AJAX calls to API endpoints
@@ -419,11 +453,13 @@ render_index() -> str
 **Purpose**: Provides system health and status information.
 
 **Responsibilities**:
+
 - Return operational status
 - Provide current server timestamp
 - Enable monitoring and troubleshooting
 
 **Key Functions**:
+
 ```python
 health_check() -> tuple[dict, int]
 ```
@@ -431,6 +467,7 @@ health_check() -> tuple[dict, int]
 **API Endpoint**: `GET /api/health`
 
 **Response Format**:
+
 ```json
 {
   "status": "running",
@@ -457,6 +494,7 @@ class Report(Base):
 ```
 
 **Field Descriptions**:
+
 - `id`: Auto-incrementing primary key for database record
 - `report_id`: Logical identifier for the report (can have multiple versions)
 - `title`: Report title
@@ -526,6 +564,7 @@ Edge Device                          Cloud Server
 **Scenario**: Cloud server is unreachable during sync operation.
 
 **Handling**:
+
 - Catch `requests.exceptions.ConnectionError` and `requests.exceptions.Timeout`
 - Log error with timestamp and report_id
 - Keep report marked as unsynchronized
@@ -533,6 +572,7 @@ Edge Device                          Cloud Server
 - Display user-friendly error message
 
 **Implementation**:
+
 ```python
 try:
     response = requests.post(url, json=payload, headers=headers, timeout=30)
@@ -549,6 +589,7 @@ except requests.exceptions.Timeout:
 **Scenario**: JWT token is rejected by cloud server.
 
 **Handling**:
+
 - Check for HTTP 401 response
 - Regenerate token and retry once
 - If still failing, log error and alert user
@@ -559,6 +600,7 @@ except requests.exceptions.Timeout:
 **Scenario**: Local SQLite database is corrupted or locked.
 
 **Handling**:
+
 - Catch `sqlite3.Error` exceptions
 - Implement retry logic with exponential backoff
 - Log detailed error information
@@ -571,12 +613,14 @@ except requests.exceptions.Timeout:
 **Scenario**: Edge device sends expired or malformed token.
 
 **Handling**:
+
 - Return HTTP 401 Unauthorized
 - Include error message in response body
 - Log authentication failure with source IP
 - Do not process the request
 
 **Response**:
+
 ```json
 {
   "error": "Invalid token",
@@ -589,12 +633,14 @@ except requests.exceptions.Timeout:
 **Scenario**: Sync request missing required fields or invalid data types.
 
 **Handling**:
+
 - Validate all required fields before processing
 - Return HTTP 400 Bad Request with details
 - Log validation errors
 - Do not store incomplete data
 
 **Response**:
+
 ```json
 {
   "error": "Invalid request",
@@ -607,6 +653,7 @@ except requests.exceptions.Timeout:
 **Scenario**: Unable to write to cloud database.
 
 **Handling**:
+
 - Catch SQLAlchemy exceptions
 - Rollback transaction
 - Return HTTP 500 Internal Server Error
@@ -618,12 +665,14 @@ except requests.exceptions.Timeout:
 **Scenario**: Edge device sends timestamp in unexpected format.
 
 **Handling**:
+
 - Implement multiple timestamp parsing strategies
 - Try ISO 8601 format first
 - Fall back to alternative formats
 - If all fail, use current server time and log warning
 
 **Implementation**:
+
 ```python
 def fix_timestamp(timestamp_str):
     try:
@@ -639,11 +688,13 @@ def fix_timestamp(timestamp_str):
 ### Error Logging Strategy
 
 **Edge Device**:
+
 - Log to local file: `/app/data/edge.log`
 - Include: timestamp, log level, component, message, stack trace
 - Rotate logs daily, keep 7 days
 
 **Cloud Server**:
+
 - Log to file: `/app/data/cloud.log`
 - Include: timestamp, log level, endpoint, user, message, stack trace
 - Rotate logs daily, keep 30 days for compliance
@@ -656,6 +707,7 @@ def fix_timestamp(timestamp_str):
 #### Edge Application Tests
 
 **Database Manager Tests**:
+
 - Test report creation with valid data
 - Test report retrieval by report_id
 - Test report updates create new versions
@@ -664,12 +716,14 @@ def fix_timestamp(timestamp_str):
 - Test database initialization
 
 **JWT Token Manager Tests**:
+
 - Test token generation with valid private key
 - Test token includes correct claims
 - Test token expiration is set correctly
 - Test token signature is valid
 
 **Sync Engine Tests**:
+
 - Test identification of unsynchronized reports
 - Test sync summary generation
 - Test error handling for network failures
@@ -678,6 +732,7 @@ def fix_timestamp(timestamp_str):
 #### Cloud Application Tests
 
 **Authentication Middleware Tests**:
+
 - Test valid token verification
 - Test expired token rejection
 - Test malformed token rejection
@@ -685,6 +740,7 @@ def fix_timestamp(timestamp_str):
 - Test user claim extraction
 
 **Sync Handler Tests**:
+
 - Test valid report storage
 - Test timestamp parsing and normalization
 - Test audit field preservation
@@ -692,6 +748,7 @@ def fix_timestamp(timestamp_str):
 - Test invalid data rejection
 
 **Report Query Service Tests**:
+
 - Test retrieval of all reports
 - Test latest report query with multiple versions
 - Test last write wins logic
@@ -705,6 +762,7 @@ def fix_timestamp(timestamp_str):
 **Scenario**: Edge device creates report and syncs to cloud.
 
 **Steps**:
+
 1. Start cloud server
 2. Start edge device
 3. Create report on edge device
@@ -720,6 +778,7 @@ def fix_timestamp(timestamp_str):
 **Scenario**: Two edge devices update same report_id.
 
 **Steps**:
+
 1. Edge1 creates report with report_id "shared-001" at T1
 2. Edge2 creates report with report_id "shared-001" at T2 (T2 > T1)
 3. Both sync to cloud
@@ -735,6 +794,7 @@ def fix_timestamp(timestamp_str):
 **Scenario**: Edge device uses invalid private key.
 
 **Steps**:
+
 1. Configure edge device with wrong private key
 2. Attempt to sync report
 3. Verify cloud returns HTTP 401
@@ -748,12 +808,14 @@ def fix_timestamp(timestamp_str):
 #### Sync Performance Test
 
 **Metrics**:
+
 - Time to sync 100 reports
 - Time to sync 1000 reports
 - Network bandwidth usage
 - Database write performance
 
 **Acceptance Criteria**:
+
 - 100 reports sync in < 10 seconds
 - 1000 reports sync in < 60 seconds
 - No memory leaks during extended sync operations
@@ -761,11 +823,13 @@ def fix_timestamp(timestamp_str):
 #### Query Performance Test
 
 **Metrics**:
+
 - Time to query all reports (10,000 records)
 - Time to query latest reports (1,000 unique report_ids)
 - API response time under load
 
 **Acceptance Criteria**:
+
 - All reports query < 2 seconds for 10,000 records
 - Latest reports query < 1 second for 1,000 unique IDs
 - API maintains < 500ms response time under 10 req/sec load
@@ -802,6 +866,7 @@ def fix_timestamp(timestamp_str):
 **Scenario**: Deploy 3 edge devices and 1 cloud server.
 
 **Steps**:
+
 1. Start cloud server
 2. Start edge1, edge2, edge3
 3. Each edge creates unique reports
@@ -838,11 +903,13 @@ def fix_timestamp(timestamp_str):
 ### Production Hardening Recommendations
 
 **Current Limitations** (noted in README):
+
 - Using HTTP instead of HTTPS
 - Using Flask development server instead of production WSGI
 - SQLite instead of PostgreSQL for cloud database
 
 **Production Requirements**:
+
 1. **HTTPS/TLS**: Deploy behind reverse proxy with TLS termination
 2. **Production WSGI**: Use Gunicorn or uWSGI for cloud application
 3. **PostgreSQL**: Replace SQLite with managed PostgreSQL (AWS RDS)
@@ -869,6 +936,7 @@ def fix_timestamp(timestamp_str):
 **1. Edge-to-Edge Synchronization**
 
 Implement peer-to-peer sync between nearby edge devices to reduce cloud load:
+
 - Use distance/hop-based routing
 - Implement gossip protocol for report propagation
 - Reduce bandwidth to cloud by aggregating changes
@@ -882,6 +950,7 @@ Implement peer-to-peer sync between nearby edge devices to reduce cloud load:
 **3. Serverless Architecture**
 
 Convert cloud application to AWS Lambda or Azure Functions:
+
 - Auto-scaling based on request volume
 - Pay-per-use pricing model
 - Reduced operational overhead
@@ -896,6 +965,7 @@ Convert cloud application to AWS Lambda or Azure Functions:
 **5. Message Queue Integration**
 
 Decouple sync ingestion from processing:
+
 - Edge devices publish to SQS/Service Bus
 - Lambda functions process queue asynchronously
 - Enables retry logic and dead letter queues
@@ -909,6 +979,7 @@ Decouple sync ingestion from processing:
 ### Monitoring and Observability
 
 **Metrics to Track**:
+
 - Sync success/failure rates per edge device
 - Sync latency (time from edge to cloud)
 - Database write throughput
@@ -917,6 +988,7 @@ Decouple sync ingestion from processing:
 - Report conflict frequency
 
 **Alerting Thresholds**:
+
 - Sync failure rate > 5%
 - API response time > 1 second
 - Authentication failures > 10/minute
@@ -927,17 +999,20 @@ Decouple sync ingestion from processing:
 ### Docker Compose Configuration
 
 **Services**:
+
 1. `cloud`: Cloud application container
 2. `edge1`: First edge device container
 3. `edge2`: Second edge device container
 
 **Volumes**:
+
 - `./keys`: Cryptographic keys (read-only)
 - `./cloud/cloud_data`: Cloud database persistence
 - `./edge1_data`: Edge1 database persistence
 - `./edge2_data`: Edge2 database persistence
 
 **Network**:
+
 - Default bridge network
 - Cloud exposes port 8443 to host
 - Edge devices communicate with cloud via internal DNS
@@ -945,6 +1020,7 @@ Decouple sync ingestion from processing:
 ### Production Deployment (AWS Example)
 
 **Architecture**:
+
 ```
 Internet
    │
@@ -963,6 +1039,7 @@ Application Load Balancer (HTTPS)
 ```
 
 **Edge Devices**:
+
 - Deployed on field hardware or edge computing devices
 - VPN connection to AWS for sync operations
 - Local SQLite for offline operation

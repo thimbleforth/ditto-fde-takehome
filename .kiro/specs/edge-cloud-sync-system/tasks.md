@@ -2,10 +2,6 @@
 
 - [x] 1. Enhance edge database schema with synchronization tracking
 
-
-
-
-
   - Add `is_deleted` column to track soft deletes
   - Add `is_synchronized` column to track sync status
   - Add indexes on `report_id` and `is_synchronized` for query performance
@@ -14,12 +10,7 @@
 
 - [x] 2. Implement CRUD operations in edge application
 
-
-
-
-
 - [x] 2.1 Create database manager module for edge device
-
 
   - Create new file `edge/database_manager.py` with functions for all CRUD operations
   - Implement `create_report()` function to insert new reports with sync status
@@ -33,8 +24,6 @@
 
 - [x] 2.2 Write unit tests for database manager
 
-
-
   - Create `edge/test_database_manager.py` with tests for each CRUD operation
   - Test report creation with valid data
   - Test report retrieval and filtering
@@ -45,12 +34,7 @@
 
 - [x] 3. Implement enhanced sync engine with user feedback
 
-
-
-
-
 - [x] 3.1 Refactor sync engine to use database manager
-
 
   - Update `sync_to_cloud()` in `edge/edge_app.py` to call `get_unsynchronized_reports()`
   - Implement sync summary tracking with counts of successful and failed syncs
@@ -61,7 +45,6 @@
 
 - [x] 3.2 Add user feedback for sync operations
 
-
   - Implement `display_sync_summary()` function to print sync results to console
   - Display list of successfully synchronized reports with report_ids
   - Display list of failed synchronizations with error details
@@ -69,7 +52,6 @@
   - _Requirements: 2.3_
 
 - [x] 3.3 Write integration tests for sync engine
-
 
   - Create `edge/test_sync_engine.py` with end-to-end sync tests
   - Test successful sync of multiple reports
@@ -80,21 +62,12 @@
 
 - [x] 4. Enhance cloud database schema for soft deletes
 
-
-
-
-
   - Add `is_deleted` column to `Report` model in `cloud/data_models.py`
   - Set default value to 0 (not deleted)
   - Update SQLAlchemy model with new column definition
   - _Requirements: 1.4, 4.5_
 
 - [x] 5. Implement enhanced sync handler in cloud application
-
-
-
-
-
 
 - [x] 5.1 Add request validation to sync endpoint
 
@@ -103,14 +76,12 @@
   - Return HTTP 400 with detailed error message if validation fails
   - _Requirements: 2.4_
 
-
 - [x] 5.2 Handle soft delete synchronization
 
   - Check for `is_deleted` flag in incoming sync requests
   - Store deleted reports with `is_deleted = 1` in cloud database
   - Preserve deletion timestamp and analyst who performed deletion
   - _Requirements: 1.4, 2.8_
-
 
 - [x] 5.3 Improve error handling in sync endpoint
 
@@ -122,7 +93,6 @@
 
 - [x] 5.4 Write unit tests for sync handler
 
-
   - Create `cloud/test_sync_handler.py` with tests for sync endpoint
   - Test successful report storage
   - Test validation error handling
@@ -132,12 +102,7 @@
 
 - [x] 6. Enhance report query endpoints
 
-
-
-
-
 - [x] 6.1 Update latest reports query to exclude deleted reports
-
 
   - Modify `/api/reports/latest` endpoint in `cloud/cloud_app.py`
   - Filter out reports where `is_deleted = 1` when determining latest version
@@ -146,14 +111,12 @@
 
 - [x] 6.2 Add filtering option for all reports endpoint
 
-
   - Update `/api/reports` endpoint to support optional query parameter `include_deleted`
   - Default behavior excludes deleted reports
   - When `include_deleted=true`, return all reports including deleted ones
   - _Requirements: 4.1, 4.5, 5.4_
 
 - [x] 6.3 Write unit tests for query endpoints
-
 
   - Create `cloud/test_query_endpoints.py` with tests for report retrieval
   - Test latest reports excludes deleted
@@ -164,11 +127,7 @@
 
 - [x] 7. Enhance web interface for better report viewing
 
-
-
-
 - [x] 7.1 Update HTML template with improved layout
-
 
   - Modify `cloud/templates/index.html` to display reports in a structured table
   - Add columns for: ID, Report ID, Title, Content, Classification, Updated At, Updated By, Status
@@ -193,12 +152,7 @@
 
 - [x] 8. Implement comprehensive error logging
 
-
-
-
-
 - [x] 8.1 Add logging to edge application
-
 
   - Create logging configuration in `edge/edge_app.py`
   - Log to file `/app/data/edge.log`
@@ -208,7 +162,6 @@
   - _Requirements: 2.7_
 
 - [x] 8.2 Add logging to cloud application
-
 
   - Create logging configuration in `cloud/cloud_app.py`
   - Log to file `/app/data/cloud.log`
@@ -220,8 +173,6 @@
 
 - [x] 8.3 Write tests for logging functionality
 
-
-
   - Create tests to verify log entries are created for key operations
   - Test log file creation and rotation
   - Test log format compliance
@@ -229,11 +180,7 @@
 
 - [x] 9. Add retry logic for failed synchronizations
 
-
-
-
 - [x] 9.1 Implement exponential backoff for sync retries
-
 
   - Add retry counter to edge database schema
   - Implement exponential backoff algorithm (1s, 2s, 4s, 8s, max 60s)
@@ -243,7 +190,6 @@
 
 - [x] 9.2 Add retry scheduling mechanism
 
-
   - Implement background thread or scheduled task for retry attempts
   - Check for failed reports periodically (e.g., every 5 minutes)
   - Attempt to resync failed reports using retry logic
@@ -252,7 +198,6 @@
 
 - [x] 9.3 Write tests for retry logic
 
-
   - Create tests for exponential backoff calculation
   - Test retry limit enforcement
   - Test retry counter reset after success
@@ -260,12 +205,7 @@
 
 - [x] 10. Enhance authentication error handling
 
-
-
-
-
 - [x] 10.1 Improve JWT token error responses
-
 
   - Update `verify_token()` in `cloud/cloud_app.py` to return detailed error information
   - Distinguish between expired tokens and invalid signatures
@@ -274,14 +214,12 @@
 
 - [x] 10.2 Add token regeneration on edge device
 
-
   - Detect HTTP 401 responses in edge sync engine
   - Automatically regenerate JWT token and retry once
   - Log authentication failures for troubleshooting
   - _Requirements: 3.1, 3.2, 3.3_
 
 - [x] 10.3 Write tests for authentication error handling
-
 
   - Create tests for expired token handling
   - Test invalid signature detection
@@ -290,11 +228,7 @@
 
 - [ ] 11. Add health monitoring enhancements
 
-
-
-
 - [x] 11.1 Expand health check endpoint
-
 
   - Add database connectivity check to `/api/health` endpoint
   - Add report count statistics to health response
@@ -303,7 +237,6 @@
   - _Requirements: 6.1, 6.2, 6.4_
 
 - [x] 11.2 Write tests for health monitoring
-
 
   - Create tests for health endpoint response format
   - Test database connectivity check
@@ -315,7 +248,6 @@
 
 - [x] 12.1 Update Dockerfiles with logging support
 
-
   - Ensure log directories are created in both edge and cloud Dockerfiles
   - Set appropriate permissions for log files
   - Verify non-root user can write to log directories
@@ -323,14 +255,12 @@
 
 - [x] 12.2 Update docker-compose.yml for log persistence
 
-
   - Add volume mounts for log directories
   - Ensure log files persist across container restarts
   - Update environment variables if needed for new features
   - _Requirements: 9.5_
 
 - [x] 12.3 Test Docker deployment end-to-end
-
 
   - Build and start all containers using docker-compose
   - Verify edge devices can create and sync reports
