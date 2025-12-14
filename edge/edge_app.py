@@ -5,6 +5,7 @@ import logging
 import threading
 import time
 import database_manager
+import argparse
 
 PRIVATE_KEY_PATH = os.getenv("PRIVATE_KEY_PATH", "private.pem")
 CLOUD_URL = os.getenv("CLOUD_URL", "http://cloud:8443")
@@ -424,9 +425,22 @@ def start_retry_scheduler(interval_seconds=300):
 if __name__ == "__main__":
     # create the local edge device database
     database_manager.init_db()
-    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--cli", action="store_true", help="Run interactive CLI instead of demo mode")
+    args = parser.parse_args()
+
     # Start the retry scheduler in the background (checks every 5 minutes)
     retry_thread, stop_event = start_retry_scheduler(interval_seconds=300)
+
+    # If CLI flag is set, import CLI module and run interactive menu
+    if args.cli:
+        from cli_interface import run_cli_loop
+        run_cli_loop()
+        # Ensure background scheduler stops
+        stop_event.set()
+        retry_thread.join(timeout=5)
+        log_info("MAIN", "CLI session ended; exiting.")
+        raise SystemExit(0)
 
     # simulate some report creation and syncing
     # example report from edge1:

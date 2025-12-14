@@ -292,15 +292,15 @@
   - Test input validation for all fields
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
 
-- [ ] 14. Implement CLI interface for edge device
-- [ ] 14.1 Create CLI menu module
+ - [x] 14. Implement CLI interface for edge device
+ - [x] 14.1 Create CLI menu module
   - Create new file `edge/cli_interface.py` with interactive menu system
   - Implement `display_menu()` function to show menu options
   - Implement `get_user_choice()` function with input validation
   - Implement main loop that continues until user selects Exit
   - _Requirements: 11.1, 11.2, 11.8_
 
-- [ ] 14.2 Implement CLI CRUD operations
+ - [x] 14.2 Implement CLI CRUD operations
   - Implement `handle_create_report()` function to prompt for and create reports
   - Implement `handle_view_reports()` function to display all local reports in formatted table
   - Implement `handle_update_report()` function to prompt for report_id and update fields
@@ -308,26 +308,26 @@
   - Implement `handle_sync()` function to trigger sync and display results
   - _Requirements: 11.3, 11.4, 11.5, 11.6, 11.7_
 
-- [ ] 14.3 Add CLI input validation
+ - [x] 14.3 Add CLI input validation
   - Implement `validate_report_id()` function to check format (alphanumeric and hyphens)
   - Implement `validate_classification()` function to ensure value is CUI, IL4, or IL5
   - Implement `validate_length()` function for title and content limits
   - Display clear error messages for invalid inputs
   - _Requirements: 11.9_
 
-- [ ] 14.4 Add CLI success/error messaging
+ - [x] 14.4 Add CLI success/error messaging
   - Display success confirmations after each operation with details
   - Display error messages with specific failure reasons
   - Format output for readability with proper spacing and alignment
   - _Requirements: 11.9, 11.10_
 
-- [ ] 14.5 Integrate CLI with edge application
+ - [x] 14.5 Integrate CLI with edge application
   - Update `edge/edge_app.py` to support CLI mode via command-line argument
   - Add `--cli` flag to launch interactive menu instead of automatic sync
   - Ensure CLI uses database_manager module for all operations
   - _Requirements: 11.1, 11.2_
 
-- [ ] 14.6 Write tests for CLI interface
+ - [x] 14.6 Write tests for CLI interface
   - Create `edge/test_cli_interface.py` with tests for menu functions
   - Test input validation functions
   - Test CRUD operation handlers with mocked database
