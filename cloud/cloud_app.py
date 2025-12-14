@@ -6,6 +6,8 @@ from sqlalchemy import create_engine, desc
 from sqlalchemy.orm import sessionmaker
 from data_models import Report, Base
 import jwt
+import re
+import time
 import datetime
 import sqlite3
 
@@ -141,6 +143,91 @@ def verify_token(token):
         }
     
 
+# Validation helpers
+VALID_CLASSIFICATIONS = {"CUI", "IL4", "IL5"}
+REPORT_ID_REGEX = re.compile(r"^[A-Za-z0-9\-]+$")
+
+def validate_report_data(data):
+    """
+    Validate incoming report data and return (is_valid, details)
+    """
+    if not isinstance(data, dict):
+        return False, "Request body must be a JSON object"
+
+    required_fields = ["report_id", "title", "content", "classification", "updated_at", "updated_by"]
+    missing_fields = [f for f in required_fields if f not in data]
+    if missing_fields:
+        return False, f"Missing required field(s): {', '.join(missing_fields)}"
+
+    # Validate report_id format
+    if not REPORT_ID_REGEX.match(data.get("report_id", "")):
+        return False, "Invalid report_id format: only alphanumeric and hyphens allowed"
+
+    # Validate classification
+    if data.get("classification") not in VALID_CLASSIFICATIONS:
+        return False, f"Invalid classification: must be one of {', '.join(sorted(VALID_CLASSIFICATIONS))}"
+
+    # Validate title/content lengths
+    title = data.get("title", "")
+    content = data.get("content", "")
+    if not title or len(title) > 255:
+        return False, "Title is required and must be 1-255 characters"
+    if not content or len(content) > 2000:
+        return False, "Content is required and must be 1-2000 characters"
+
+    # Validate updated_by
+    if not data.get("updated_by"):
+        return False, "updated_by is required"
+
+    # Validate is_deleted if present
+    if "is_deleted" in data:
+        try:
+            flag = int(data.get("is_deleted"))
+            if flag not in (0, 1):
+                return False, "is_deleted must be 0 or 1"
+        except Exception:
+            return False, "is_deleted must be an integer 0 or 1"
+
+    # Validate updated_at parseability
+    try:
+        _ = datetime.datetime.fromisoformat(data.get("updated_at"))
+    except Exception:
+        try:
+            _ = datetime.datetime.strptime(data.get("updated_at"), "%Y-%m-%dT%H:%M:%S.%f%z")
+        except Exception:
+            return False, "updated_at must be a valid ISO8601 timestamp"
+
+    return True, "ok"
+
+
+# Simple in-memory rate limiter (per-user/token or per-IP fallback)
+RATE_LIMIT = int(os.getenv("CLOUD_RATE_LIMIT", "100"))
+RATE_WINDOW = int(os.getenv("CLOUD_RATE_WINDOW", "60"))  # seconds
+_rate_cache = {}
+
+def _rate_limit_key_from_request(req, claims=None):
+    if claims and isinstance(claims, dict) and claims.get("user"):
+        return f"user:{claims.get('user')}"
+    # fallback to IP
+    return f"ip:{req.remote_addr or 'unknown'}"
+
+def check_rate_limit(req, claims=None):
+    key = _rate_limit_key_from_request(req, claims)
+    now = int(time.time())
+    window_start = now - RATE_WINDOW
+    hits = _rate_cache.get(key, [])
+    # Remove old timestamps
+    hits = [t for t in hits if t >= window_start]
+    if len(hits) >= RATE_LIMIT:
+        # store updated list and return False
+        _rate_cache[key] = hits
+        return False
+    # record hit
+    hits.append(now)
+    _rate_cache[key] = hits
+    return True
+    
+
 def fix_timestamp(data):
     # Change the timestamp from string to datetime
     raw_ts = data["updated_at"]
@@ -177,6 +264,10 @@ def sync():
         }), 401
     
     user = claims.get('user', 'unknown')
+    # Rate limiting check
+    if not check_rate_limit(request, claims):
+        log_warning("/api/sync", user, "Rate limit exceeded")
+        return jsonify({"error": "rate_limit_exceeded", "details": f"Rate limit of {RATE_LIMIT} requests per {RATE_WINDOW}s exceeded"}), 429
     log_info("/api/sync", user, f"Sync request received from user: {user}")
 
     # Validate request data
@@ -185,15 +276,11 @@ def sync():
         log_warning("/api/sync", user, "Invalid request: Request body is required")
         return jsonify({"error": "Invalid request", "details": "Request body is required"}), 400
     
-    required_fields = ["report_id", "title", "content", "classification", "updated_at", "updated_by"]
-    missing_fields = [field for field in required_fields if field not in data]
-    
-    if missing_fields:
-        log_warning("/api/sync", user, f"Invalid request: Missing required field(s): {', '.join(missing_fields)}")
-        return jsonify({
-            "error": "Invalid request",
-            "details": f"Missing required field(s): {', '.join(missing_fields)}"
-        }), 400
+    # Field validation
+    valid, details = validate_report_data(data)
+    if not valid:
+        log_warning("/api/sync", user, f"Validation failed: {details}")
+        return jsonify({"error": "Invalid request", "details": details}), 400
 
     # Sync logic: append new record to ledger
     session = Session()
@@ -208,7 +295,7 @@ def sync():
             classification=data["classification"],
             updated_at=data["updated_at"],
             updated_by=data["updated_by"],
-            is_deleted=data.get("is_deleted", 0)
+            is_deleted=int(data.get("is_deleted", 0))
         )
         session.add(new_report)
         session.commit()

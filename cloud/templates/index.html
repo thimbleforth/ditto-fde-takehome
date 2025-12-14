@@ -431,7 +431,7 @@
               ? `<span class="version-badge">${versionCounts[report.report_id]} versions</span>`
               : '';
             
-            const classificationBadge = `<span class="classification-badge classification-${report.classification}">${report.classification}</span>`;
+            const classificationBadge = '<span class="classification-badge classification-' + escapeHtml(report.classification) + '">' + escapeHtml(report.classification) + '</span>';
             
             const contentPreview = report.content.length > 50 
               ? report.content.substring(0, 50) + '...'
@@ -439,13 +439,13 @@
             
             html += `
               <tr class="${rowClass}" onclick="showDetails(${idx})">
-                <td>${report.id}</td>
-                <td>${report.report_id}${versionBadge}</td>
-                <td>${report.title}</td>
-                <td><div class="content-preview">${contentPreview}</div></td>
+                <td>${escapeHtml(report.id)}</td>
+                <td>${escapeHtml(report.report_id)}${versionBadge}</td>
+                <td>${escapeHtml(report.title)}</td>
+                <td><div class="content-preview">${escapeHtml(contentPreview)}</div></td>
                 <td>${classificationBadge}</td>
-                <td>${formatTimestamp(report.updated_at)}</td>
-                <td>${report.updated_by}</td>
+                <td>${escapeHtml(formatTimestamp(report.updated_at))}</td>
+                <td>${escapeHtml(report.updated_by)}</td>
                 <td>${statusBadge}</td>
               </tr>
             `;
@@ -525,7 +525,7 @@
               ? `<span class="version-badge">${versionCounts[report.report_id]} versions</span>`
               : '';
             
-            const classificationBadge = `<span class="classification-badge classification-${report.classification}">${report.classification}</span>`;
+            const classificationBadge = '<span class="classification-badge classification-' + escapeHtml(report.classification) + '">' + escapeHtml(report.classification) + '</span>';
             
             const contentPreview = report.content.length > 50 
               ? report.content.substring(0, 50) + '...'
@@ -533,13 +533,13 @@
             
             html += `
               <tr class="${rowClass}" onclick="showDetails(${idx})">
-                <td>${report.id}</td>
-                <td>${report.report_id}${versionBadge}</td>
-                <td>${report.title}</td>
-                <td><div class="content-preview">${contentPreview}</div></td>
+                <td>${escapeHtml(report.id)}</td>
+                <td>${escapeHtml(report.report_id)}${versionBadge}</td>
+                <td>${escapeHtml(report.title)}</td>
+                <td><div class="content-preview">${escapeHtml(contentPreview)}</div></td>
                 <td>${classificationBadge}</td>
-                <td>${formatTimestamp(report.updated_at)}</td>
-                <td>${report.updated_by}</td>
+                <td>${escapeHtml(formatTimestamp(report.updated_at))}</td>
+                <td>${escapeHtml(report.updated_by)}</td>
                 <td>${statusBadge}</td>
               </tr>
             `;
@@ -576,13 +576,27 @@
       }
     }
 
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
     function showDetails(idx) {
       const report = window.reportData[idx];
-      details.innerHTML = `
-        <h3>Report Details</h3>
-        <pre>${JSON.stringify(report, null, 2)}</pre>
-      `;
-      details.classList.add("active");
+      // Use textContent inside a pre element to avoid XSS
+      details.innerHTML = '';
+      const h3 = document.createElement('h3');
+      h3.textContent = 'Report Details';
+      const pre = document.createElement('pre');
+      pre.textContent = JSON.stringify(report, null, 2);
+      details.appendChild(h3);
+      details.appendChild(pre);
+      details.classList.add('active');
     }
   </script>
 </body>

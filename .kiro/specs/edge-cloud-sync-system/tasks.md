@@ -339,8 +339,8 @@
   - Verify logs are created and persisted
   - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
 
-- [ ] 13. Add input validation and security hardening
-- [ ] 13.1 Implement input sanitization for report fields
+- [x] 13. Add input validation and security hardening
+- [x] 13.1 Implement input sanitization for report fields
   - Add validation for report_id format (alphanumeric and hyphens only)
   - Add length limits for title (255 chars) and content (2000 chars)
   - Validate classification is one of: CUI, IL4, IL5
@@ -348,14 +348,14 @@
   - Escape HTML in content to prevent XSS
   - _Requirements: 1.5, 8.1, 8.2, 8.3, 8.4, 8.5_
 
-- [ ] 13.2 Add rate limiting to cloud endpoints
+- [x] 13.2 Add rate limiting to cloud endpoints
   - Implement rate limiting middleware for `/api/sync` endpoint
   - Limit to 100 requests per minute per edge device
   - Return HTTP 429 when rate limit exceeded
   - Log rate limit violations
   - _Requirements: 3.5_
 
-- [ ] 13.3 Write security tests
+- [x] 13.3 Write security tests
   - Create tests for SQL injection attempts
   - Test XSS prevention in report content
   - Test rate limiting enforcement
