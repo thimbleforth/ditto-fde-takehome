@@ -1,0 +1,236 @@
+openapi: 3.0.3
+info:
+  title: Ditto Edge-Cloud Sync API
+  version: "1.0.0"
+  description: API specification for cloud and edge endpoints used in the ditto-fde-takehome project.
+servers:
+  - url: https://localhost:8443
+    description: Cloud server (default docker-compose mapping)
+  - url: http://edge.local:5000
+    description: Edge device local server (example)
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Report:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Internal database id
+        report_id:
+          type: string
+          description: Business identifier for the report
+        title:
+          type: string
+        content:
+          type: string
+        classification:
+          type: string
+          enum: [CUI, IL4, IL5]
+        updated_at:
+          type: string
+          format: date-time
+        updated_by:
+          type: string
+        is_deleted:
+          type: integer
+          description: Soft delete flag (0 = present, 1 = deleted)
+        is_synchronized:
+          type: integer
+          description: Sync status (0 = pending, 1 = synced)
+    SyncRequest:
+      type: object
+      required: [report_id, title, content, classification, updated_at, updated_by]
+      properties:
+        report_id:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        classification:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+        updated_by:
+          type: string
+        is_deleted:
+          type: integer
+          default: 0
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+paths:
+  /api/sync:
+    post:
+      summary: Synchronize a report to the cloud
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncRequest'
+      responses:
+        '200':
+          description: Sync accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  report_id:
+                    type: string
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/reports:
+    get:
+      summary: Retrieve all reports (cloud)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: include_deleted
+          schema:
+            type: boolean
+          description: If true, includes soft-deleted reports
+      responses:
+        '200':
+          description: List of reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Report'
+  /api/reports/latest:
+    get:
+      summary: Retrieve latest version of each report_id
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Latest reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Report'
+  /api/health:
+    get:
+      summary: Health check with DB connectivity
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  db_connected:
+                    type: boolean
+                  report_count:
+                    type: integer
+                  last_sync:
+                    type: string
+                    format: date-time
+        '503':
+          description: Unhealthy / DB unreachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/reports/{id}:
+    put:
+      summary: Update a local report (edge)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncRequest'
+      responses:
+        '200':
+          description: Updated
+        '400':
+          $ref: '#/components/schemas/Error'
+    delete:
+      summary: Soft delete a local report (edge)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted (soft)
+  /api/reports:
+    post:
+      summary: Create a new local report (edge)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncRequest'
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/sync:
+    post:
+      summary: Trigger manual sync from edge to cloud (edge endpoint)
+      requestBody:
+        required: false
+      responses:
+        '200':
+          description: Sync initiated
+        '500':
+          description: Error initiating sync

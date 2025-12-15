@@ -78,3 +78,19 @@ I'd also focus on using AWS Security Hub and declarative compliance controls at 
 * Same goes for the Dockerfiles; version of the Python image is pinned.
 
 * This POC does not use HTTPS or a production-ready WSGI server. Both of those problems would have to be fixed at minimum to improve this software's production readiness.
+
+## New Features (summary)
+
+- CLI interface for edge devices (`--cli`) with interactive CRUD and sync commands.
+- Edge web interface available on port 5000 (configurable per device via env var).
+- Soft delete support: reports include `is_deleted` flag and deletion metadata.
+- Synchronization status tracking and retry logic with exponential backoff.
+- Enhanced logging for edge and cloud, persisted via docker volumes.
+
+## Documentation
+
+Full documentation, API specs, examples, and a user guide are available in the `docs/` folder. Key docs:
+
+- `docs/openapi.yaml` — OpenAPI 3 spec for cloud and edge APIs
+- `docs/api_examples.md` — curl examples and sample requests/responses
+- `docs/user_guide.md` — CLI + web usage guide and troubleshooting
