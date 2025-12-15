@@ -16,6 +16,10 @@ class TestCloudLogging(unittest.TestCase):
         self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix='.sqlite')
         self.temp_db.close()
         os.environ['CLOUD_DB_PATH'] = self.temp_db.name
+        # Ensure the app uses this test DB and reset rate cache between tests
+        app.config['CLOUD_DB_PATH'] = self.temp_db.name
+        import cloud_app as cloud_app_module
+        cloud_app_module._rate_cache = {}
         
         # Configure Flask app for testing
         app.config['TESTING'] = True
@@ -40,7 +44,12 @@ class TestCloudLogging(unittest.TestCase):
     def tearDown(self):
         """Clean up temporary files."""
         if os.path.exists(self.temp_db.name):
-            os.unlink(self.temp_db.name)
+            try:
+                os.unlink(self.temp_db.name)
+            except PermissionError:
+                # On some platforms SQLite file may still be held open briefly by the test
+                # process; ignore removal failure to avoid flakey tests.
+                pass
         self.logger.handlers.clear()
     
     def get_log_messages(self):

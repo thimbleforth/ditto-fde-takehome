@@ -16,6 +16,11 @@ LOG_FILE_PATH = os.getenv("LOG_FILE_PATH", "/app/data/cloud.log")
 
 app = Flask(__name__)
 
+# Expose a `Session` symbol so tests can monkeypatch it (inmemory_test_runner also
+# sets this when running the in-memory checks). It may be set to a callable that
+# returns a session instance.
+Session = None
+
 # Configure logging
 def setup_logging():
     """Configure logging with file handler and console handler."""
@@ -71,7 +76,10 @@ def log_warning(endpoint, user, message):
 
 # --- Database setup ---
 def _get_engine():
-    return create_engine(f"sqlite:///{CLOUD_DB_PATH}")
+    # Read the DB path at call time so tests can set CLOUD_DB_PATH per-module.
+    # Prefer a per-app config value when running under a test client.
+    db_path = app.config.get('CLOUD_DB_PATH') or os.getenv("CLOUD_DB_PATH", CLOUD_DB_PATH)
+    return create_engine(f"sqlite:///{db_path}")
 
 
 def get_session():
@@ -79,6 +87,11 @@ def get_session():
 
     Ensures the database schema exists by calling create_all on the engine.
     """
+    # Allow tests to override the Session factory at module level.
+    # If `Session` is provided and callable, use it (may raise to simulate errors).
+    if 'Session' in globals() and callable(globals().get('Session')):
+        return globals().get('Session')()
+
     engine = _get_engine()
     Base.metadata.create_all(engine)
     SessionLocal = sessionmaker(bind=engine)
@@ -289,7 +302,7 @@ def sync():
     # Field validation
     valid, details = validate_report_data(data)
     if not valid:
-        log_warning("/api/sync", user, f"Validation failed: {details}")
+        log_warning("/api/sync", user, f"Invalid request: {details}")
         return jsonify({"error": "Invalid request", "details": details}), 400
 
     # Sync logic: append new record to ledger
@@ -383,6 +396,7 @@ def get_reports():
             "updated_by": report.updated_by,
             "is_deleted": report.is_deleted
         })
+    session.close()
     return jsonify(report_list)
 
 @app.route("/api/reports/latest", methods=["GET"])
@@ -409,6 +423,7 @@ def get_latest_reports():
             "updated_by": report.updated_by
         })
 
+    session.close()
     return jsonify(report_list)
 
 @app.route("/")

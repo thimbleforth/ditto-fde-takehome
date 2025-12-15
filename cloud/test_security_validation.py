@@ -21,6 +21,10 @@ TestSession = sessionmaker(bind=test_engine)
 @pytest.fixture
 def client():
     app.config['TESTING'] = True
+    # Ensure the app uses this test DB and reset rate cache between tests
+    app.config['CLOUD_DB_PATH'] = test_db_path
+    import cloud_app as cloud_app_module
+    cloud_app_module._rate_cache = {}
     Base.metadata.create_all(test_engine)
     with app.test_client() as client:
         yield client
