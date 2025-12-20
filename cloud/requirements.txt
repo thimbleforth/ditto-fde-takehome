@@ -7,9 +7,6 @@ Flask==3.1.2
 # Database ORM
 SQLAlchemy==2.0.44
 
-# For Postgres support (optional, if you swap SQLite for Postgres)
-psycopg==3.2.13
-
 # HTTP client for edge-to-cloud sync
 requests==2.32.5
 
